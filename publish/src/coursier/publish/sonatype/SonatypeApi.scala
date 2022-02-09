@@ -31,8 +31,8 @@ final case class SonatypeApi(
     url: String,
     post: Option[RequestBody] = None,
     nested: Boolean = true
-  ): Task[T] =
-    clientUtil.get(url, post, nested)(Response.decode[T]).map(_.data)
+  ): T =
+    clientUtil.get(url, post, nested)(Response.decode[T]).data
 
   private val clientUtil = OkHttpClientUtil(client, authentication, verbosity)
 
@@ -60,8 +60,10 @@ final case class SonatypeApi(
     }
 
     // for w/e reasons, Profiles.Profile.decode isn't implicitly picked
-    val task = get(s"$base/staging/profiles")(DecodeJson.ListDecodeJson(Profiles.Profile.decode))
-      .map(_.map(_.profile))
+    val task = Task.delay {
+      get(s"$base/staging/profiles")(DecodeJson.ListDecodeJson(Profiles.Profile.decode))
+        .map(_.profile)
+    }
 
     withRetry { attempt =>
       for {
@@ -73,7 +75,7 @@ final case class SonatypeApi(
     }
   }
 
-  def rawListProfiles(): Task[Json] =
+  def rawListProfiles(): Json =
     get[Json](s"$base/staging/profiles")
 
   def decodeListProfilesResponse(json: Json): Either[Exception, Seq[SonatypeApi.Profile]] =
@@ -82,13 +84,12 @@ final case class SonatypeApi(
       case Right(l) => Right(l.map(_.profile))
     }
 
-  def listProfileRepositories(profileIdOpt: Option[String]): Task[Seq[SonatypeApi.Repository]] =
+  def listProfileRepositories(profileIdOpt: Option[String]): Seq[SonatypeApi.Repository] =
     get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(
       DecodeJson.ListDecodeJson(RepositoryResponse.decoder)
-    )
-      .map(_.map(_.repository))
+    ).map(_.repository)
 
-  def rawListProfileRepositories(profileIdOpt: Option[String]): Task[Json] =
+  def rawListProfileRepositories(profileIdOpt: Option[String]): Json =
     get[Json](s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))
 
   def decodeListProfileRepositoriesResponse(json: Json)
@@ -98,15 +99,13 @@ final case class SonatypeApi(
       case Right(l) => Right(l.map(_.repository))
     }
 
-  def createStagingRepository(profile: Profile, description: String): Task[String] =
+  def createStagingRepository(profile: Profile, description: String): String =
     get(
       s"${profile.uri}/start",
       post = Some(postBody(StartRequest(description))(StartRequest.encoder))
-    )(StartResponse.decoder).map { r =>
-      r.stagedRepositoryId
-    }
+    )(StartResponse.decoder).stagedRepositoryId
 
-  def rawCreateStagingRepository(profile: Profile, description: String): Task[Json] =
+  def rawCreateStagingRepository(profile: Profile, description: String): Json =
     get[Json](
       s"${profile.uri}/start",
       post = Some(postBody(StartRequest(description))(StartRequest.encoder))
@@ -117,7 +116,7 @@ final case class SonatypeApi(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Task[Unit] =
+  ): Unit =
     clientUtil.create(
       s"${profile.uri}/$action",
       post = Some(postBody(StagedRepositoryRequest(description, repositoryId))(
@@ -129,29 +128,29 @@ final case class SonatypeApi(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Task[Unit] =
+  ): Unit =
     stagedRepoAction("finish", profile, repositoryId, description)
 
   def sendPromoteStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Task[Unit] =
+  ): Unit =
     stagedRepoAction("promote", profile, repositoryId, description)
 
   def sendDropStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Task[Unit] =
+  ): Unit =
     stagedRepoAction("drop", profile, repositoryId, description)
 
   def lastActivity(repositoryId: String, action: String) =
-    get[List[Json]](s"$base/staging/repository/$repositoryId/activity", nested = false).map { l =>
-      l.filter { json =>
+    get[List[Json]](s"$base/staging/repository/$repositoryId/activity", nested = false)
+      .filter { json =>
         json.field("name").flatMap(_.string).contains(action)
-      }.lastOption
-    }
+      }
+      .lastOption
 
   def waitForStatus(
     profileId: String,
@@ -166,7 +165,7 @@ final case class SonatypeApi(
     // TODO Stop early in case of error (which statuses exactly???)
 
     def task(attempt: Int, nextDelay: Duration, totalDelay: Duration): Task[Unit] =
-      listProfileRepositories(Some(profileId)).flatMap { l =>
+      Task.delay(listProfileRepositories(Some(profileId))).flatMap { l =>
         l.find(_.id == repositoryId) match {
           case None =>
             Task.fail(new Exception(s"Repository $repositoryId not found"))

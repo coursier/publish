@@ -8,6 +8,9 @@ import coursier.publish.fileset.{FileSet, Path}
 import coursier.publish.signing.logger.SignerLogger
 import coursier.util.Task
 
+import scala.util.Try
+import scala.util.control.NonFatal
+
 /** Signs artifacts.
   */
 trait Signer {
@@ -17,7 +20,7 @@ trait Signer {
     * @return
     *   an error message (left), or the signature file content (right), wrapped in [[Task]]
     */
-  def sign(content: Content): Task[Either[String, String]]
+  def sign(content: Content): Either[String, String]
 
   /** Adds missing signatures in a [[FileSet]].
     *
@@ -34,7 +37,7 @@ trait Signer {
     dontSignExtensions: Set[String],
     dontSignFiles: Set[String],
     logger: => SignerLogger
-  ): Task[Either[(Path, Content, String), FileSet]] = {
+  ): Either[(Path, Content, String), FileSet] = {
 
     val elementsOrSignatures = fileSet.elements.flatMap {
       case (path, content) =>
@@ -70,63 +73,49 @@ trait Signer {
       }
 
     def signaturesTask(id: Object, logger0: SignerLogger) =
-      toSign.foldLeft(
-        Task.point[Either[(Path, Content, String), List[(Path, Content)]]](Right(Nil))
-      ) {
-        case (acc, (path, content)) =>
-          for {
-            previous <- acc
-            res <- {
-              previous match {
-                case l @ Left(_) => Task.point(l)
-                case Right(l) =>
-                  val doSign = sign(content).map {
-                    case Left(e) =>
-                      Left((path, content, e))
-                    case Right(s) =>
-                      val content = Content.InMemory(now, s.getBytes(StandardCharsets.UTF_8))
-                      Right((path.mapLast(_ + ".asc"), content) :: l)
-                  }
-
-                  for {
-                    _ <- Task.delay(logger0.signingElement(id, path))
-                    a <- doSign.attempt
-                    // FIXME Left case of doSign not passed as error here
-                    _   <- Task.delay(logger0.signedElement(id, path, a.left.toOption))
-                    res <- Task.fromEither(a)
-                  } yield res
+      toSign.foldLeft[Either[(Path, Content, String), List[(Path, Content)]]](Right(Nil)) {
+        case (previous, (path, content)) =>
+          previous match {
+            case l @ Left(_) => l
+            case Right(l) =>
+              def doSign() = sign(content) match {
+                case Left(e) =>
+                  Left((path, content, e))
+                case Right(s) =>
+                  val content = Content.InMemory(now, s.getBytes(StandardCharsets.UTF_8))
+                  Right((path.mapLast(_ + ".asc"), content) :: l)
               }
-            }
-          } yield res
-      }.map(_.map { elements =>
+
+              logger0.signingElement(id, path)
+              val res =
+                try doSign()
+                catch {
+                  case NonFatal(e) =>
+                    logger0.signedElement(id, path, Some(e))
+                    throw e
+                }
+              logger0.signedElement(id, path, None)
+              res
+          }
+      }.map { elements =>
         FileSet(elements.reverse)
-      })
+      }
 
     val toSignFs = FileSet(toSign)
 
     if (toSignFs.isEmpty)
-      Task.point(Right(FileSet.empty))
+      Right(FileSet.empty)
     else {
-      val before = Task.delay {
-        val id      = new Object
-        val logger0 = logger
-        logger0.start()
-        logger0.signing(id, toSignFs)
-        (id, logger0)
-      }
+      val id      = new Object
+      val logger0 = logger
+      logger0.start()
+      logger0.signing(id, toSignFs)
 
-      def after(id: Object, logger0: SignerLogger) = Task.delay {
+      try signaturesTask(id, logger0)
+      finally {
         logger0.signed(id, toSignFs)
         logger0.stop()
       }
-
-      for {
-        idLogger <- before
-        (id, logger0) = idLogger
-        a   <- signaturesTask(id, logger0).attempt
-        _   <- after(id, logger0)
-        res <- Task.fromEither(a)
-      } yield res
     }
   }
 

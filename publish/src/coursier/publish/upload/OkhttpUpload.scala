@@ -1,11 +1,10 @@
 package coursier.publish.upload
 
-import java.util.concurrent.{ExecutorService, TimeUnit}
+import java.util.concurrent.TimeUnit
 
 import coursier.cache.CacheUrl
 import coursier.core.Authentication
 import coursier.publish.upload.logger.UploadLogger
-import coursier.util.Task
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 import okio.BufferedSink
 
@@ -14,7 +13,6 @@ import scala.util.Try
 
 final case class OkhttpUpload(
   client: OkHttpClient,
-  pool: ExecutorService,
   expect100Continue: Boolean,
   urlSuffix: String
 ) extends Upload {
@@ -28,7 +26,7 @@ final case class OkhttpUpload(
     content: Array[Byte],
     logger: UploadLogger,
     loggingIdOpt: Option[Object]
-  ): Task[Option[Upload.Error]] = {
+  ): Option[Upload.Error] = {
 
     val body: RequestBody =
       new RequestBody {
@@ -62,43 +60,41 @@ final case class OkhttpUpload(
       b.build()
     }
 
-    Task.schedule(pool) {
-      logger.uploading(url, loggingIdOpt, Some(content.length))
+    logger.uploading(url, loggingIdOpt, Some(content.length))
 
-      val res = Try {
-        val response = client.newCall(request).execute()
+    val res = Try {
+      val response = client.newCall(request).execute()
 
-        if (response.isSuccessful)
-          None
+      if (response.isSuccessful)
+        None
+      else {
+        val code = response.code()
+        if (code == 401) {
+          val realmOpt = Option(response.header("WWW-Authenticate")).collect {
+            case CacheUrl.BasicRealm(r) => r
+          }
+          Some(new Upload.Error.Unauthorized(url, realmOpt))
+        }
         else {
-          val code = response.code()
-          if (code == 401) {
-            val realmOpt = Option(response.header("WWW-Authenticate")).collect {
-              case CacheUrl.BasicRealm(r) => r
-            }
-            Some(new Upload.Error.Unauthorized(url, realmOpt))
-          }
-          else {
-            val content = Try(response.body().string()).getOrElse("")
-            Some(
-              new Upload.Error.HttpError(
-                code,
-                response.headers().toMultimap.asScala.mapValues(_.asScala.toList).iterator.toMap,
-                content
-              )
+          val content = Try(response.body().string()).getOrElse("")
+          Some(
+            new Upload.Error.HttpError(
+              code,
+              response.headers().toMultimap.asScala.mapValues(_.asScala.toList).iterator.toMap,
+              content
             )
-          }
+          )
         }
       }
-
-      logger.uploaded(
-        url,
-        loggingIdOpt,
-        res.toEither.fold(e => Some(new Upload.Error.UploadError(url, e)), x => x)
-      )
-
-      res.get
     }
+
+    logger.uploaded(
+      url,
+      loggingIdOpt,
+      res.toEither.fold(e => Some(new Upload.Error.UploadError(url, e)), x => x)
+    )
+
+    res.get
   }
 }
 
@@ -110,13 +106,13 @@ object OkhttpUpload {
       .readTimeout(60L, TimeUnit.SECONDS)
       .build()
 
-  def create(pool: ExecutorService): Upload =
+  def create(): Upload =
     // Seems we can't even create / shutdown the client thread pool (via its Dispatcher)…
-    OkhttpUpload(client(), pool, expect100Continue = false, "")
-  def create(pool: ExecutorService, expect100Continue: Boolean): Upload =
+    OkhttpUpload(client(), expect100Continue = false, "")
+  def create(expect100Continue: Boolean): Upload =
     // Seems we can't even create / shutdown the client thread pool (via its Dispatcher)…
-    OkhttpUpload(client(), pool, expect100Continue, "")
-  def create(pool: ExecutorService, expect100Continue: Boolean, urlSuffix: String): Upload =
+    OkhttpUpload(client(), expect100Continue, "")
+  def create(expect100Continue: Boolean, urlSuffix: String): Upload =
     // Seems we can't even create / shutdown the client thread pool (via its Dispatcher)…
-    OkhttpUpload(client(), pool, expect100Continue, urlSuffix)
+    OkhttpUpload(client(), expect100Continue, urlSuffix)
 }

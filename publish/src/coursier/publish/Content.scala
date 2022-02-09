@@ -3,14 +3,12 @@ package coursier.publish
 import java.nio.file.{Files, Path}
 import java.time.Instant
 
-import coursier.util.Task
-
 /** Content of a file, either on disk or in memory.
   */
 sealed abstract class Content extends Product with Serializable {
-  def lastModifiedTask: Task[Instant]
+  def lastModified(): Instant
   // TODO Support chunked reading
-  def contentTask: Task[Array[Byte]]
+  def content(): Array[Byte]
 
   def pathOpt: Option[Path] = None
 }
@@ -18,24 +16,17 @@ sealed abstract class Content extends Product with Serializable {
 object Content {
 
   final case class File(path: Path) extends Content {
-    def lastModifiedTask: Task[Instant] =
-      Task.delay {
-        Files.getLastModifiedTime(path)
-          .toInstant
-      }
-    def contentTask: Task[Array[Byte]] =
-      Task.delay {
-        Files.readAllBytes(path)
-      }
+    def lastModified(): Instant =
+      Files.getLastModifiedTime(path).toInstant
+    def content(): Array[Byte] =
+      Files.readAllBytes(path)
     override def pathOpt: Option[Path] =
       Some(path)
   }
 
-  final case class InMemory(lastModified: Instant, content: Array[Byte]) extends Content {
-    def lastModifiedTask: Task[Instant] =
-      Task.point(lastModified)
-    def contentTask: Task[Array[Byte]] =
-      Task.point(content)
+  final case class InMemory(lastModified: Instant, content0: Array[Byte]) extends Content {
+    def content(): Array[Byte] =
+      content0
   }
 
 }

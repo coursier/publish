@@ -20,7 +20,7 @@ final case class OkhttpDownload(client: OkHttpClient, pool: ExecutorService) ext
     url: String,
     authentication: Option[Authentication],
     logger: DownloadLogger
-  ): Task[Option[(Option[Instant], Array[Byte])]] = {
+  ): Option[(Option[Instant], Array[Byte])] = {
 
     // FIXME Some duplication with upload below…
 
@@ -36,48 +36,49 @@ final case class OkhttpDownload(client: OkHttpClient, pool: ExecutorService) ext
       b.build()
     }
 
-    Task.schedule(pool) {
-      logger.downloadingIfExists(url)
+    logger.downloadingIfExists(url)
 
-      val res = Try {
-        var response: Response = null
+    val res = Try {
+      var response: Response = null
 
-        try {
-          response = client.newCall(request).execute()
+      try {
+        response = client.newCall(request).execute()
 
-          if (response.isSuccessful) {
-            val lastModifiedOpt = Option(response.header("Last-Modified")).map { s =>
-              HttpDate.parse(s).toInstant
-            }
-            Right(Some((lastModifiedOpt, response.body().bytes())))
+        if (response.isSuccessful) {
+          val lastModifiedOpt = Option(response.header("Last-Modified")).map { s =>
+            HttpDate.parse(s).toInstant
           }
+          Right(Some((lastModifiedOpt, response.body().bytes())))
+        }
+        else {
+          val code = response.code()
+          if (code / 100 == 4)
+            Right(None)
           else {
-            val code = response.code()
-            if (code / 100 == 4)
-              Right(None)
-            else {
-              val content = Try(response.body().string()).getOrElse("")
-              Left(new Download.Error.HttpError(
-                url,
-                code,
-                response.headers().toMultimap.asScala.mapValues(_.asScala.toList).iterator.toMap,
-                content
-              ))
-            }
+            val content = Try(response.body().string()).getOrElse("")
+            Left(new Download.Error.HttpError(
+              url,
+              code,
+              response.headers().toMultimap.asScala.mapValues(_.asScala.toList).iterator.toMap,
+              content
+            ))
           }
         }
-        finally if (response != null)
-          response.body().close()
-      }.toEither.flatMap(identity)
+      }
+      finally if (response != null)
+        response.body().close()
+    }.toEither.flatMap(identity)
 
-      logger.downloadedIfExists(
-        url,
-        res.toOption.flatMap(_.map(_._2.length)),
-        res.left.toOption.map(e => new Download.Error.DownloadError(url, e))
-      )
+    logger.downloadedIfExists(
+      url,
+      res.toOption.flatMap(_.map(_._2.length)),
+      res.left.toOption.map(e => new Download.Error.DownloadError(url, e))
+    )
 
-      Task.fromEither(res)
-    }.flatMap(identity)
+    res match {
+      case Left(e)  => throw new Exception(e)
+      case Right(v) => v
+    }
   }
 
 }

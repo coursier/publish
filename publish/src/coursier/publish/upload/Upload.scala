@@ -6,6 +6,7 @@ import coursier.core.Authentication
 import coursier.maven.MavenRepository
 import coursier.publish.upload.logger.UploadLogger
 import coursier.util.Task
+import java.util.concurrent.ExecutorService
 
 /** Uploads / sends content to a repository.
   */
@@ -31,14 +32,14 @@ trait Upload {
     content: Array[Byte],
     logger: UploadLogger,
     loggingIdOpt: Option[Object]
-  ): Task[Option[Upload.Error]]
+  ): Option[Upload.Error]
 
   final def upload(
     url: String,
     authentication: Option[Authentication],
     content: Array[Byte],
     logger: UploadLogger
-  ): Task[Option[Upload.Error]] =
+  ): Option[Upload.Error] =
     upload(url, authentication, content, logger, None)
 
   /** Uploads a whole [[FileSet]].
@@ -52,7 +53,7 @@ trait Upload {
     repository: MavenRepository,
     fileSet: FileSet,
     logger: UploadLogger,
-    parallel: Boolean
+    parallel: Option[ExecutorService]
   ): Task[Seq[(Path, Content, Upload.Error)]] = {
 
     val baseUrl0 = repository.root
@@ -68,17 +69,18 @@ trait Upload {
         .map {
           case (path, content) =>
             val url = s"$baseUrl0/${path.elements.mkString("/")}"
-            content.contentTask.flatMap(b =>
+            def run() = {
+              val b = content.content()
               upload(url, repository.authentication, b, logger, Some(id))
-                .map(_.map((path, content, _)))
-            )
+                .map((path, content, _))
+            }
+            parallel match {
+              case Some(pool) => Task.schedule(pool)(run())
+              case None       => Task.delay(run())
+            }
         }
 
-      if (parallel)
-        Task.gather.gather(tasks).map { l =>
-          l.flatten
-        }
-      else
+      if (parallel.isEmpty)
         tasks
           .foldLeft(Task.point(Option.empty[(Path, Content, Upload.Error)])) {
             case (acc, task) =>
@@ -88,6 +90,10 @@ trait Upload {
               } yield errorOpt
           }
           .map(_.toSeq)
+      else
+        Task.gather.gather(tasks).map { l =>
+          l.flatten
+        }
     }
 
     val before = Task.delay {

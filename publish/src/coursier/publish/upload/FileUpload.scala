@@ -21,27 +21,26 @@ final case class FileUpload(base: Path) extends Upload {
     content: Array[Byte],
     logger: UploadLogger,
     loggingId: Option[Object]
-  ): Task[Option[Upload.Error]] = {
+  ): Option[Upload.Error] = {
 
     val p = base0.resolve(Paths.get(new URI(url))).normalize()
-    if (p.startsWith(base0))
-      Task.delay {
-        logger.uploading(p.toString, loggingId, Some(content.length))
-        val errorOpt =
-          try {
-            Util.createDirectories(p.getParent)
-            Files.write(p, content)
-            None
-          }
-          catch {
-            case NonFatal(e) =>
-              Some(e)
-          }
-        logger.uploaded(p.toString, loggingId, errorOpt.map(e => new Upload.Error.FileException(e)))
+    if (p.startsWith(base0)) {
+      logger.uploading(p.toString, loggingId, Some(content.length))
+      val errorOpt =
+        try {
+          Util.createDirectories(p.getParent)
+          Files.write(p, content)
+          None
+        }
+        catch {
+          case NonFatal(e) =>
+            Some(e)
+        }
+      logger.uploaded(p.toString, loggingId, errorOpt.map(e => new Upload.Error.FileException(e)))
 
-        None
-      }
+      None
+    }
     else
-      Task.fail(new Exception(s"Invalid path: $url (base: $base0, p: $p)"))
+      throw new Exception(s"Invalid path: $url (base: $base0, p: $p)")
   }
 }
