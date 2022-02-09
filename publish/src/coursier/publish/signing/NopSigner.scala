@@ -8,8 +8,8 @@ import coursier.publish.signing.logger.SignerLogger
 import coursier.util.Task
 
 object NopSigner extends Signer {
-  def sign(content: Content): Task[Either[String, String]] =
-    Task.point(Right(""))
+  def sign(content: Content): Either[String, String] =
+    Right("")
 
   override def signatures(
     fileSet: FileSet,
@@ -17,6 +17,6 @@ object NopSigner extends Signer {
     dontSignExtensions: Set[String],
     dontSignFiles: Set[String],
     logger: => SignerLogger
-  ): Task[Either[(Path, Content, String), FileSet]] =
-    Task.point(Right(FileSet.empty))
+  ): Either[(Path, Content, String), FileSet] =
+    Right(FileSet.empty)
 }

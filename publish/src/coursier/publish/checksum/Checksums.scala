@@ -7,6 +7,8 @@ import coursier.publish.Content
 import coursier.publish.checksum.logger.ChecksumLogger
 import coursier.publish.fileset.FileSet
 import coursier.util.Task
+import scala.util.control.NonFatal
+import java.util.concurrent.ExecutorService
 
 object Checksums {
 
@@ -37,6 +39,7 @@ object Checksums {
     types: Seq[ChecksumType],
     fileSet: FileSet,
     now: Instant,
+    pool: ExecutorService,
     logger: => ChecksumLogger
   ): Task[FileSet] = {
 
@@ -72,24 +75,35 @@ object Checksums {
       } yield (type0, path, content)
 
     // compute missing checksum files
-    def checksumFilesTask(id: Object, logger0: ChecksumLogger) = Task.gather.gather {
-      for ((type0, path, content) <- missing)
-        yield {
-          val checksumPath = path.mapLast(_ + "." + type0.extension)
-          val doSign = content.contentTask.map { b =>
-            val checksum = Checksum.compute(type0, b)
-            (checksumPath, Content.InMemory(now, checksum.repr.getBytes(StandardCharsets.UTF_8)))
-          }
-          for {
-            _   <- Task.delay(logger0.computing(id, type0, checksumPath.repr))
-            a   <- doSign.attempt
-            _   <- Task.delay(logger0.computed(id, type0, checksumPath.repr, a.left.toOption))
-            res <- Task.fromEither(a)
-          } yield res
+    def checksumFilesTask(id: Object, logger0: ChecksumLogger) =
+      Task.gather.gather {
+        missing.map {
+          case (type0, path, content) =>
+            val checksumPath = path.mapLast(_ + "." + type0.extension)
+            Task.schedule(pool) {
+              logger0.computing(id, type0, checksumPath.repr)
+              val res =
+                try {
+                  val b        = content.content()
+                  val checksum = Checksum.compute(type0, b)
+                  (
+                    checksumPath,
+                    Content.InMemory(now, checksum.repr.getBytes(StandardCharsets.UTF_8))
+                  )
+                }
+                catch {
+                  case NonFatal(e) =>
+                    logger0.computed(id, type0, checksumPath.repr, Some(e))
+                    throw e
+                }
+              logger0.computed(id, type0, checksumPath.repr, None)
+              res
+            }
         }
-    }.map { elements =>
-      FileSet(elements)
-    }
+      }
+        .map { elements =>
+          FileSet(elements)
+        }
 
     val missingFs = FileSet(
       missing.map {

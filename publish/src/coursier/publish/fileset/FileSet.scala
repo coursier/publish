@@ -8,6 +8,7 @@ import coursier.publish.Pom.{Developer, License}
 import coursier.util.Task
 
 import scala.collection.compat._
+import java.util.concurrent.ExecutorService
 
 final case class FileSet(elements: Seq[(Path, Content)]) {
   def ++(other: FileSet): FileSet = {
@@ -49,7 +50,8 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
     homePage: Option[String],
     gitDomainPath: Option[(String, String)],
     distMgmtRepo: Option[(String, String, String)],
-    now: Instant
+    now: Instant,
+    pool: ExecutorService
   ): Task[FileSet] = {
 
     val split = Group.split(this)
@@ -67,7 +69,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
 
         Task.gather.gather {
           split.map { m =>
-            m.transform(map, now)
+            Task.schedule(pool)(m.transform(map, now))
           }
         }
       }
@@ -83,7 +85,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
               .toMap
             Task.sync.gather {
               groups.map { group =>
-                group.transformVersion(map, now)
+                Task.schedule(pool)(group.transformVersion(map, now))
               }
             }
           }
@@ -95,26 +97,30 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
       Task.gather.gather {
         l.map {
           case m: Group.Module =>
-            m.updateMetadata(
-              org,
-              name,
-              version,
-              licenses,
-              developers,
-              homePage,
-              gitDomainPath,
-              distMgmtRepo,
-              now
-            )
+            Task.schedule(pool) {
+              m.updateMetadata(
+                org,
+                name,
+                version,
+                licenses,
+                developers,
+                homePage,
+                gitDomainPath,
+                distMgmtRepo,
+                now
+              )
+            }
           case m: Group.MavenMetadata =>
-            m.updateContent(
-              org,
-              name,
-              version,
-              version.filter(!_.endsWith("SNAPSHOT")),
-              version.toSeq,
-              now
-            )
+            Task.schedule(pool) {
+              m.updateContent(
+                org,
+                name,
+                version,
+                version.filter(!_.endsWith("SNAPSHOT")),
+                version.toSeq,
+                now
+              )
+            }
         }
       }
     }.flatMap { groups =>
@@ -125,7 +131,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
     }
   }
 
-  def order: Task[FileSet] = {
+  def order(pool: ExecutorService): Task[FileSet] = {
 
     val split = Group.split(this)
 
@@ -157,7 +163,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
       .gather {
         split.collect {
           case m: Group.Module =>
-            m.dependenciesOpt.map((m, _))
+            Task.schedule(pool)(m.dependenciesOpt).map((m, _))
         }
       }
       .map { l =>

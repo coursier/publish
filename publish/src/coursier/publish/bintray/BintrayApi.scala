@@ -18,51 +18,44 @@ final case class BintrayApi(
 
   private val clientUtil = OkHttpClientUtil(client, authentication, verbosity)
 
-  def getRepository(subject: String, repo: String): Task[Option[Json]] =
-    clientUtil.get[Json](s"$base/repos/$subject/$repo") // escaping?
-      .attempt
-      .flatMap {
-        case Left(_: FileNotFoundException) =>
-          Task.point(None)
-        case Right(json) =>
-          Task.point(Some(json))
-        case Left(e) =>
-          Task.fail(e)
-      }
+  def getRepository(subject: String, repo: String): Option[Json] =
+    try Some(clientUtil.get[Json](s"$base/repos/$subject/$repo")) // escaping?
+    catch {
+      case _: FileNotFoundException =>
+        None
+    }
 
   def createRepository(
     subject: String,
     repo: String
-  ): Task[Json] =
+  ): Json =
     clientUtil.get[Json](
       s"$base/repos/$subject/$repo",
       post = Some(
-        clientUtil.postBody(
-          BintrayApi.CreateRepositoryRequest(repo, "maven")
-        )(BintrayApi.CreateRepositoryRequest.encoder)
+        clientUtil.postBody(BintrayApi.CreateRepositoryRequest(repo, "maven"))(
+          BintrayApi.CreateRepositoryRequest.encoder
+        )
       )
     )
 
   def createRepositoryIfNeeded(
     subject: String,
     repo: String
-  ): Task[Boolean] =
-    getRepository(subject, repo).flatMap {
-      case None    => createRepository(subject, repo).map(_ => true)
-      case Some(_) => Task.point(false)
+  ): Boolean =
+    getRepository(subject, repo) match {
+      case None =>
+        createRepository(subject, repo)
+        true
+      case Some(_) =>
+        false
     }
 
-  def getPackage(subject: String, repo: String, package0: String): Task[Option[Json]] =
-    clientUtil.get[Json](s"$base/packages/$subject/$repo/$package0") // escaping?
-      .attempt
-      .flatMap {
-        case Left(_: FileNotFoundException) =>
-          Task.point(None)
-        case Right(json) =>
-          Task.point(Some(json))
-        case Left(e) =>
-          Task.fail(e)
-      }
+  def getPackage(subject: String, repo: String, package0: String): Option[Json] =
+    try Some(clientUtil.get[Json](s"$base/packages/$subject/$repo/$package0")) // escaping?
+    catch {
+      case _: FileNotFoundException =>
+        None
+    }
 
   def createPackage(
     subject: String,
@@ -70,7 +63,7 @@ final case class BintrayApi(
     package0: String,
     licenses: Seq[String],
     vcsUrl: String
-  ): Task[Json] =
+  ): Json =
     clientUtil.get[Json](
       s"$base/packages/$subject/$repo",
       post = Some(
@@ -86,10 +79,13 @@ final case class BintrayApi(
     package0: String,
     licenses: Seq[String],
     vcsUrl: String
-  ): Task[Boolean] =
-    getPackage(subject, repo, package0).flatMap {
-      case None    => createPackage(subject, repo, package0, licenses, vcsUrl).map(_ => true)
-      case Some(_) => Task.point(false)
+  ): Boolean =
+    getPackage(subject, repo, package0) match {
+      case None =>
+        createPackage(subject, repo, package0, licenses, vcsUrl)
+        true
+      case Some(_) =>
+        false
     }
 
 }

@@ -50,72 +50,62 @@ final case class OkHttpClientUtil(
       EncodeJson.of[B].apply(content).nospaces.getBytes(StandardCharsets.UTF_8)
     )
 
-  def create(url: String, post: Option[RequestBody] = None): Task[Unit] = {
+  def create(url: String, post: Option[RequestBody] = None): Unit = {
 
-    val t = Task.delay {
-      if (verbosity >= 1)
-        Console.err.println(s"Getting $url")
-      val resp = client.newCall(request(url, post)).execute()
-      if (verbosity >= 1)
-        Console.err.println(s"Done: $url")
+    if (verbosity >= 1)
+      Console.err.println(s"Getting $url")
+    val resp = client.newCall(request(url, post)).execute()
+    if (verbosity >= 1)
+      Console.err.println(s"Done: $url")
 
-      if (resp.code() == 201)
-        Task.point(())
-      else
-        Task.fail(new Exception(
-          s"Failed to get $url (http status: ${resp.code()}, response: ${Try(resp.body().string()).getOrElse("")})"
-        ))
-    }
-
-    t.flatMap(identity)
+    if (resp.code() != 201)
+      throw new Exception(
+        s"Failed to get $url (http status: ${resp.code()}, response: ${Try(resp.body().string()).getOrElse("")})"
+      )
   }
 
   def get[T: DecodeJson](
     url: String,
     post: Option[RequestBody] = None,
     nested: Boolean = true
-  ): Task[T] = {
+  ): T = {
 
-    val t = Task.delay {
-      if (verbosity >= 1)
-        Console.err.println(s"Getting $url")
-      if (verbosity >= 2)
-        post.foreach { b =>
-          val buf = new okio.Buffer
-          b.writeTo(buf)
-          System.err.println("Sending " + buf)
-        }
-      val resp = client.newCall(request(url, post)).execute()
-      if (verbosity >= 1)
-        Console.err.println(s"Done: $url")
-
-      if (resp.isSuccessful)
-        if (nested)
-          resp.body().string().decodeEither(DecodeJson.of[T]) match {
-            case Left(e) =>
-              Task.fail(new Exception(s"Received invalid response from $url: $e"))
-            case Right(t) =>
-              Task.point(t)
-          }
-        else
-          resp.body().string().decodeEither[T] match {
-            case Left(e) =>
-              Task.fail(new Exception(s"Received invalid response from $url: $e"))
-            case Right(t) =>
-              Task.point(t)
-          }
-      else {
-        val msg =
-          s"Failed to get $url (http status: ${resp.code()}, response: ${Try(resp.body().string()).getOrElse("")})"
-        val notFound = resp.code() / 100 == 4
-        if (notFound)
-          Task.fail(new FileNotFoundException(msg))
-        else
-          Task.fail(new Exception(msg))
+    if (verbosity >= 1)
+      Console.err.println(s"Getting $url")
+    if (verbosity >= 2)
+      post.foreach { b =>
+        val buf = new okio.Buffer
+        b.writeTo(buf)
+        System.err.println("Sending " + buf)
       }
-    }
+    val resp = client.newCall(request(url, post)).execute()
+    if (verbosity >= 1)
+      Console.err.println(s"Done: $url")
 
-    t.flatMap(identity)
+    if (resp.isSuccessful)
+      if (nested)
+        resp.body().string().decodeEither(DecodeJson.of[T]) match {
+          case Left(e) =>
+            throw new Exception(s"Received invalid response from $url: $e")
+          case Right(t) =>
+            t
+        }
+      else
+        resp.body().string().decodeEither[T] match {
+          case Left(e) =>
+            throw new Exception(s"Received invalid response from $url: $e")
+          case Right(t) =>
+            t
+        }
+    else {
+      val msg =
+        s"Failed to get $url (http status: ${resp.code()}, response: ${Try(resp.body().string()).getOrElse("")})"
+      val notFound = resp.code() / 100 == 4
+      if (notFound)
+        throw new FileNotFoundException(msg)
+      else
+        throw new Exception(msg)
+    }
   }
 
 }

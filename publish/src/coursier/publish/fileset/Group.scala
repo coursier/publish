@@ -14,6 +14,7 @@ import coursier.publish.download.logger.DownloadLogger
 import coursier.util.Task
 
 import scala.xml.{Elem, XML}
+import java.util.concurrent.ExecutorService
 
 /** A subset of a [[FileSet]], with particular semantic.
   */
@@ -32,12 +33,12 @@ sealed abstract class Group extends Product with Serializable {
   def transform(
     map: Map[(Organization, ModuleName), (Organization, ModuleName)],
     now: Instant
-  ): Task[Group]
+  ): Group
 
   def transformVersion(
     map: Map[(Organization, ModuleName), (String, String)],
     now: Instant
-  ): Task[Group]
+  ): Group
 
   /** Ensure the files of this [[Group]] are ordered (POMs last for [[Group.Module]], etc.) */
   def ordered: Group
@@ -151,15 +152,15 @@ object Group {
       gitDomainPath: Option[(String, String)],
       distMgmtRepo: Option[(String, String, String)],
       now: Instant
-    ): Task[Module] =
+    ): Module =
       if (
         org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty && developers.isEmpty && homePage.isEmpty && gitDomainPath.isEmpty
       )
-        Task.point(this)
+        this
       else
         updateOrgNameVer(org, name, version)
           .updatePom(now, licenses, developers, homePage, gitDomainPath, distMgmtRepo)
-          .flatMap(_.updateMavenMetadata(now))
+          .updateMavenMetadata(now)
 
     def removeMavenMetadata: Module =
       copy(
@@ -178,20 +179,18 @@ object Group {
     def transform(
       map: Map[(Organization, ModuleName), (Organization, ModuleName)],
       now: Instant
-    ): Task[Module] = {
+    ): Module = {
 
       val base = map.get((organization, name)) match {
-        case None => Task.point(this)
+        case None => this
         case Some(to) =>
           updateMetadata(Some(to._1), Some(to._2), None, None, None, None, None, None, now)
       }
 
-      base.flatMap { m =>
-        m.transformPom(now) { elem =>
-          map.foldLeft(elem) {
-            case (acc, (from, to)) =>
-              Pom.transformDependency(acc, from, to)
-          }
+      base.transformPom(now) { elem =>
+        map.foldLeft(elem) {
+          case (acc, (from, to)) =>
+            Pom.transformDependency(acc, from, to)
         }
       }
     }
@@ -199,7 +198,7 @@ object Group {
     def transformVersion(
       map: Map[(Organization, ModuleName), (String, String)],
       now: Instant
-    ): Task[Module] =
+    ): Module =
       transformPom(now) { elem =>
         map.foldLeft(elem) {
           case (acc, ((org, name), (fromVer, toVer))) =>
@@ -222,18 +221,17 @@ object Group {
         }
     }
 
-    def dependenciesOpt: Task[Seq[coursier.core.Module]] =
+    def dependenciesOpt: Seq[coursier.core.Module] =
       pomOpt match {
-        case None => Task.point(Nil)
+        case None => Nil
         case Some((_, content)) =>
-          content.contentTask.flatMap { b =>
-            val s = new String(b, StandardCharsets.UTF_8)
-            coursier.maven.MavenRepository.parseRawPomSax(s) match {
-              case Left(e) =>
-                Task.fail(new Exception(s"Error parsing POM: $e"))
-              case Right(proj) =>
-                Task.point(proj.dependencies.map(_._2.module))
-            }
+          val b = content.content()
+          val s = new String(b, StandardCharsets.UTF_8)
+          coursier.maven.MavenRepository.parseRawPomSax(s) match {
+            case Left(e) =>
+              throw new Exception(s"Error parsing POM: $e")
+            case Right(proj) =>
+              proj.dependencies.map(_._2.module)
           }
       }
 
@@ -254,7 +252,7 @@ object Group {
       homePage: Option[String],
       gitDomainPath: Option[(String, String)],
       distMgmtRepo: Option[(String, String, String)]
-    ): Task[Module] =
+    ): Module =
       transformPom(now) { elem =>
         var elem0 = elem
         elem0 = Pom.overrideOrganization(organization, elem0)
@@ -273,22 +271,19 @@ object Group {
         elem0
       }
 
-    def transformPom(now: Instant)(f: Elem => Elem): Task[Module] =
+    def transformPom(now: Instant)(f: Elem => Elem): Module =
       pomOpt match {
         case None =>
-          Task.fail(
-            new Exception(s"No POM found (files: ${files.elements.map(_._1).mkString(", ")})")
-          )
+          throw new Exception(s"No POM found (files: ${files.elements.map(_._1).mkString(", ")})")
         case Some((fileName, c)) =>
-          c.contentTask.map { pomBytes =>
-            val elem = f(XML.loadString(new String(pomBytes, StandardCharsets.UTF_8)))
+          val pomBytes = c.content()
+          val elem     = f(XML.loadString(new String(pomBytes, StandardCharsets.UTF_8)))
 
-            val pomContent0 =
-              Content.InMemory(now, Pom.print(elem).getBytes(StandardCharsets.UTF_8))
+          val pomContent0 =
+            Content.InMemory(now, Pom.print(elem).getBytes(StandardCharsets.UTF_8))
 
-            val updatedContent = files.update(fileName, pomContent0)
-            copy(files = updatedContent)
-          }
+          val updatedContent = files.update(fileName, pomContent0)
+          copy(files = updatedContent)
       }
 
     /** Adds a maven-metadata.xml file to this module if it doesn't have one already.
@@ -333,35 +328,34 @@ object Group {
       * @param now:
       *   if maven-metadata.xml is edited, its last modified time.
       */
-    def updateMavenMetadata(now: Instant): Task[Module] =
+    def updateMavenMetadata(now: Instant): Module =
       mavenMetadataContentOpt match {
         case None =>
-          Task.point(this)
+          this
 
         case Some(content) =>
-          content.contentTask.map { b =>
+          val b = content.content()
 
-            val updatedMetadataBytes = {
-              val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
-              val newContent = coursier.publish.MavenMetadata.update(
-                elem,
-                Some(organization),
-                Some(name),
-                None,
-                None,
-                Nil,
-                Some(now.atOffset(ZoneOffset.UTC).toLocalDateTime)
-              )
-              coursier.publish.MavenMetadata.print(newContent).getBytes(StandardCharsets.UTF_8)
-            }
-
-            val updatedContent =
-              files.update("maven-metadata.xml", Content.InMemory(now, updatedMetadataBytes))
-            copy(files = updatedContent)
+          val updatedMetadataBytes = {
+            val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+            val newContent = coursier.publish.MavenMetadata.update(
+              elem,
+              Some(organization),
+              Some(name),
+              None,
+              None,
+              Nil,
+              Some(now.atOffset(ZoneOffset.UTC).toLocalDateTime)
+            )
+            coursier.publish.MavenMetadata.print(newContent).getBytes(StandardCharsets.UTF_8)
           }
+
+          val updatedContent =
+            files.update("maven-metadata.xml", Content.InMemory(now, updatedMetadataBytes))
+          copy(files = updatedContent)
       }
 
-    def addSnapshotVersioning(now: Instant, ignoreExtensions: Set[String]): Task[Module] = {
+    def addSnapshotVersioning(now: Instant, ignoreExtensions: Set[String]): Module = {
 
       assert(version.endsWith("-SNAPSHOT") || version.endsWith(".SNAPSHOT"))
 
@@ -426,54 +420,48 @@ object Group {
         )
       }
 
-      val content = mavenMetadataContentOpt match {
+      val (buildNumber, elem) = mavenMetadataContentOpt match {
         case None =>
-          Task.point {
-            val buildNumber = 1
-            buildNumber -> publish.MavenMetadata.createSnapshotVersioning(
-              organization,
-              name,
-              version,
-              (now.atOffset(ZoneOffset.UTC).toLocalDateTime, buildNumber),
-              now,
+          val buildNumber = 1
+          buildNumber -> publish.MavenMetadata.createSnapshotVersioning(
+            organization,
+            name,
+            version,
+            (now.atOffset(ZoneOffset.UTC).toLocalDateTime, buildNumber),
+            now,
+            artifacts(buildNumber)
+          )
+        case Some(c) =>
+          val b    = c.content()
+          val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+          val latestSnapshotParams =
+            publish.MavenMetadata.currentSnapshotVersioning(elem).getOrElse {
+              ???
+            }
+          val latestSnapshotVer =
+            s"$versionPrefix-${latestSnapshotParams._2.atOffset(ZoneOffset.UTC).toLocalDateTime.format(publish.MavenMetadata.timestampPattern)}-${latestSnapshotParams._1}"
+          if (snapshotVersioning.contains(latestSnapshotVer))
+            latestSnapshotParams._1 -> elem // kind of meh, this is in case the source already has snapshot ver, and the dest hasn't, so the current maven metadata only comes from the source
+          else {
+            val buildNumber = latestSnapshotParams._1 + 1
+            buildNumber -> publish.MavenMetadata.updateSnapshotVersioning(
+              elem,
+              None,
+              None,
+              Some(version),
+              Some((now.atOffset(ZoneOffset.UTC).toLocalDateTime, buildNumber)),
+              Some(now.atZone(ZoneOffset.UTC).toLocalDateTime),
               artifacts(buildNumber)
             )
           }
-        case Some(c) =>
-          c.contentTask.map { b =>
-            val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
-            val latestSnapshotParams =
-              publish.MavenMetadata.currentSnapshotVersioning(elem).getOrElse {
-                ???
-              }
-            val latestSnapshotVer =
-              s"$versionPrefix-${latestSnapshotParams._2.atOffset(ZoneOffset.UTC).toLocalDateTime.format(publish.MavenMetadata.timestampPattern)}-${latestSnapshotParams._1}"
-            if (snapshotVersioning.contains(latestSnapshotVer))
-              latestSnapshotParams._1 -> elem // kind of meh, this is in case the source already has snapshot ver, and the dest hasn't, so the current maven metadata only comes from the source
-            else {
-              val buildNumber = latestSnapshotParams._1 + 1
-              buildNumber -> publish.MavenMetadata.updateSnapshotVersioning(
-                elem,
-                None,
-                None,
-                Some(version),
-                Some((now.atOffset(ZoneOffset.UTC).toLocalDateTime, buildNumber)),
-                Some(now.atZone(ZoneOffset.UTC).toLocalDateTime),
-                artifacts(buildNumber)
-              )
-            }
-          }
       }
 
-      content.map {
-        case (buildNumber, elem) =>
-          val b      = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
-          val files1 = files0(buildNumber).update("maven-metadata.xml", Content.InMemory(now, b))
-          copy(
-            snapshotVersioning = Some(updatedVersion(buildNumber)),
-            files = files1
-          )
-      }
+      val b      = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
+      val files1 = files0(buildNumber).update("maven-metadata.xml", Content.InMemory(now, b))
+      copy(
+        snapshotVersioning = Some(updatedVersion(buildNumber)),
+        files = files1
+      )
     }
 
     def ordered: Module = {
@@ -534,35 +522,34 @@ object Group {
       release: Option[String],
       addVersions: Seq[String],
       now: Instant
-    ): Task[MavenMetadata] =
+    ): MavenMetadata =
       xmlOpt match {
         case None =>
-          Task.point(this)
+          this
         case Some(c) =>
-          c.contentTask.map { b =>
-            val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
-            val updated = coursier.publish.MavenMetadata.update(
-              elem,
-              org,
-              name,
-              latest,
-              release,
-              addVersions,
-              Some(now.atOffset(ZoneOffset.UTC).toLocalDateTime)
-            )
-            val b0 = coursier.publish.MavenMetadata.print(updated)
-              .getBytes(StandardCharsets.UTF_8)
-            val c0 = Content.InMemory(now, b0)
-            copy(
-              files = files.update("maven-metadata.xml", c0)
-            )
-          }
+          val b    = c.content()
+          val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+          val updated = coursier.publish.MavenMetadata.update(
+            elem,
+            org,
+            name,
+            latest,
+            release,
+            addVersions,
+            Some(now.atOffset(ZoneOffset.UTC).toLocalDateTime)
+          )
+          val b0 = coursier.publish.MavenMetadata.print(updated)
+            .getBytes(StandardCharsets.UTF_8)
+          val c0 = Content.InMemory(now, b0)
+          copy(
+            files = files.update("maven-metadata.xml", c0)
+          )
       }
 
     def transform(
       map: Map[(Organization, ModuleName), (Organization, ModuleName)],
       now: Instant
-    ): Task[MavenMetadata] =
+    ): MavenMetadata =
       map.get((organization, name)) match {
         case Some(to) if to != (organization, name) =>
           updateContent(
@@ -572,21 +559,19 @@ object Group {
             None,
             Nil,
             now
-          ).map { m =>
-            m.copy(
-              organization = to._1,
-              name = to._2
-            )
-          }
+          ).copy(
+            organization = to._1,
+            name = to._2
+          )
         case _ =>
-          Task.point(this)
+          this
       }
 
     def transformVersion(
       map: Map[(Organization, ModuleName), (String, String)],
       now: Instant
-    ): Task[MavenMetadata] =
-      Task.point(this)
+    ): MavenMetadata =
+      this
 
     def ordered: MavenMetadata = {
       // reverse alphabetical order should be enough here (will put checksums and signatures before underlying files)
@@ -706,7 +691,11 @@ object Group {
     * @param now:
     *   if new files are created, their last-modified time.
     */
-  def addOrUpdateMavenMetadata(groups: Seq[Group], now: Instant): Task[Seq[Group]] = {
+  def addOrUpdateMavenMetadata(
+    groups: Seq[Group],
+    now: Instant,
+    pool: ExecutorService
+  ): Task[Seq[Group]] = {
 
     val modules = groups
       .collect { case m: Group.Module => m }
@@ -721,42 +710,45 @@ object Group {
       .iterator
       .toMap
 
-    val a = for ((k @ (org, name), m) <- modules.toSeq) yield {
+    val a = modules.toSeq.map {
+      case (k @ (org, name), m) =>
+        val versions = m.map(_.version)
+        val latest   = versions.map(Version(_)).max.repr
+        val releaseOpt =
+          Some(versions.filter(publish.MavenMetadata.isReleaseVersion).map(Version(_)))
+            .filter(_.nonEmpty)
+            .map(_.max.repr)
 
-      val versions = m.map(_.version)
-      val latest   = versions.map(Version(_)).max.repr
-      val releaseOpt = Some(versions.filter(publish.MavenMetadata.isReleaseVersion).map(Version(_)))
-        .filter(_.nonEmpty)
-        .map(_.max.repr)
-
-      meta.get(k) match {
-        case None =>
-          val elem = publish.MavenMetadata.create(
-            org,
-            name,
-            Some(latest),
-            releaseOpt,
-            versions,
-            now
-          )
-          val b = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
-          val content = DirContent(Seq(
-            "maven-metadata.xml" -> Content.InMemory(now, b)
-          ))
-          Seq(Task.point(k -> Group.MavenMetadata(org, name, content)))
-        case Some(md) =>
-          Seq(md.updateContent(
-            None,
-            None,
-            Some(latest),
-            releaseOpt,
-            versions,
-            now
-          ).map(k -> _))
-      }
+        meta.get(k) match {
+          case None =>
+            val elem = publish.MavenMetadata.create(
+              org,
+              name,
+              Some(latest),
+              releaseOpt,
+              versions,
+              now
+            )
+            val b = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
+            val content = DirContent(Seq(
+              "maven-metadata.xml" -> Content.InMemory(now, b)
+            ))
+            Task.point(k -> Group.MavenMetadata(org, name, content))
+          case Some(md) =>
+            Task.schedule(pool) {
+              k -> md.updateContent(
+                None,
+                None,
+                Some(latest),
+                releaseOpt,
+                versions,
+                now
+              )
+            }
+        }
     }
 
-    Task.gather.gather(a.flatten)
+    Task.gather.gather(a)
       .map(l => modules.values.toSeq.flatten ++ (meta ++ l.toMap).values.toSeq)
   }
 
@@ -764,7 +756,8 @@ object Group {
     orgNames: Seq[(Organization, ModuleName)],
     download: Download,
     repository: MavenRepository,
-    logger: DownloadLogger
+    logger: DownloadLogger,
+    pool: ExecutorService
   ): Task[Seq[MavenMetadata]] = {
 
     val root = repository.root + "/"
@@ -773,7 +766,9 @@ object Group {
       orgNames.map {
         case (org, name) =>
           val url = root + s"${org.value.split('.').mkString("/")}/${name.value}/maven-metadata.xml"
-          download.downloadIfExists(url, repository.authentication, logger).map(_.map {
+          Task.schedule(pool)(
+            download.downloadIfExists(url, repository.authentication, logger)
+          ).map(_.map {
             case (lastModifiedOpt, b) =>
               // download and verify checksums too?
               MavenMetadata(
@@ -798,14 +793,14 @@ object Group {
     download: Download,
     repository: MavenRepository,
     logger: DownloadLogger
-  ): Task[Module] = {
+  ): Module = {
 
     // assert(m.snapshotVersioning.isEmpty)
 
     val root = repository.root + "/"
     val url  = root + s"${m.baseDir.mkString("/")}/maven-metadata.xml"
 
-    download.downloadIfExists(url, repository.authentication, logger).map {
+    download.downloadIfExists(url, repository.authentication, logger) match {
       case Some((lastModifiedOpt, b)) =>
         m.copy(
           files = m.files.update(
@@ -820,7 +815,8 @@ object Group {
 
   def mergeMavenMetadata(
     groups: Seq[MavenMetadata],
-    now: Instant
+    now: Instant,
+    pool: ExecutorService
   ): Task[Seq[MavenMetadata]] = {
 
     val tasks = groups
@@ -835,33 +831,30 @@ object Group {
           case Seq()  => sys.error("can't possibly happen")
           case Seq(m) => Task.point(m)
           case Seq(m, others @ _*) =>
-            m.xmlOpt.get.contentTask.flatMap { b =>
+            Task.schedule(pool) {
+              val b        = m.xmlOpt.get.content()
               val mainElem = XML.loadString(new String(b, StandardCharsets.UTF_8))
 
-              others.foldLeft(Task.point(mainElem)) {
-                case (mainElemTask, m0) =>
-                  for {
-                    mainElem0 <- mainElemTask
-                    b         <- m0.xmlOpt.get.contentTask
-                  } yield {
-                    val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
-                    val info = publish.MavenMetadata.info(elem)
-                    publish.MavenMetadata.update(
-                      mainElem0,
-                      None,
-                      None,
-                      info.latest,
-                      info.release,
-                      info.versions,
-                      info.lastUpdated
-                    )
-                  }
-              }.map { elem =>
-                val b = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
-                m.copy(
-                  files = m.files.update("maven-metadata.xml", Content.InMemory(now, b))
-                )
+              val elem = others.foldLeft(mainElem) {
+                case (mainElem0, m0) =>
+                  val b    = m0.xmlOpt.get.content()
+                  val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+                  val info = publish.MavenMetadata.info(elem)
+                  publish.MavenMetadata.update(
+                    mainElem0,
+                    None,
+                    None,
+                    info.latest,
+                    info.release,
+                    info.versions,
+                    info.lastUpdated
+                  )
               }
+
+              val b0 = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
+              m.copy(
+                files = m.files.update("maven-metadata.xml", Content.InMemory(now, b0))
+              )
             }
         }
 

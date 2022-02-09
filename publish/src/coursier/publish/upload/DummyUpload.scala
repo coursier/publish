@@ -11,6 +11,6 @@ final case class DummyUpload(underlying: Upload) extends Upload {
     content: Array[Byte],
     logger: UploadLogger,
     loggingId: Option[Object]
-  ): Task[Option[Upload.Error]] =
-    Task.point(None)
+  ): Option[Upload.Error] =
+    None
 }

@@ -9,10 +9,11 @@ import coursier.util.Task
 
 import scala.collection.compat.immutable.LazyList
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 object Dir {
 
-  def fileSet(dir: Path, logger: DirLogger): Task[FileSet] = {
+  def fileSet(dir: Path, logger: DirLogger): FileSet = {
 
     def files(f: Path): LazyList[Path] =
       if (Files.isRegularFile(f)) {
@@ -36,15 +37,13 @@ object Dir {
         // ???
         LazyList.empty
 
-    Task.delay {
-      val dir0 = dir.normalize().toAbsolutePath
-      val elems = files(dir0).toVector.map { f =>
-        val p       = FsPath(dir0.relativize(f).iterator().asScala.map(_.toString).toVector)
-        val content = Content.File(f)
-        (p, content)
-      }
-      FileSet(elems)
+    val dir0 = dir.normalize().toAbsolutePath
+    val elems = files(dir0).toVector.map { f =>
+      val p       = FsPath(dir0.relativize(f).iterator().asScala.map(_.toString).toVector)
+      val content = Content.File(f)
+      (p, content)
     }
+    FileSet(elems)
   }
 
   def isRepository(dir: Path): Boolean = {
@@ -109,25 +108,24 @@ object Dir {
     }
   }
 
-  def read(dir: Path, logger: => DirLogger): Task[FileSet] = {
+  def read(dir: Path, logger: => DirLogger): FileSet = {
 
-    val before = Task.delay {
-      val logger0 = logger
-      logger0.start()
-      logger0.reading(dir)
-      logger0
-    }
-    def after(count: Int, logger0: DirLogger) = Task.delay {
-      logger0.read(dir, count)
-      logger0.stop()
-    }
+    val logger0 = logger
+    logger0.start()
+    logger0.reading(dir)
 
-    for {
-      logger0 <- before
-      a       <- fileSet(dir, logger0).attempt
-      _       <- after(a.toOption.fold(0)(_.elements.length), logger0)
-      fs      <- Task.fromEither(a)
-    } yield fs
+    try {
+      val res =
+        try fileSet(dir, logger0)
+        catch {
+          case NonFatal(e) =>
+            logger0.read(dir, 0)
+            throw e
+        }
+      logger0.read(dir, res.elements.length)
+      res
+    }
+    finally logger0.stop()
   }
 
 }

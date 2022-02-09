@@ -11,7 +11,7 @@ trait Download {
     url: String,
     authentication: Option[Authentication],
     logger: DownloadLogger
-  ): Task[Option[(Option[Instant], Array[Byte])]]
+  ): Option[(Option[Instant], Array[Byte])]
 }
 
 object Download {
