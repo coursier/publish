@@ -1,0 +1,1 @@
+# coursier-publish
