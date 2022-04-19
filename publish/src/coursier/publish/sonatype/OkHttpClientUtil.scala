@@ -3,14 +3,14 @@ package coursier.publish.sonatype
 import java.io.FileNotFoundException
 import java.nio.charset.StandardCharsets
 
-import argonaut.{DecodeJson, EncodeJson}
-import argonaut.Argonaut._
+import com.github.plokhotnyuk.jsoniter_scala.core._
 import coursier.core.Authentication
 import coursier.util.Task
 import okhttp3.{MediaType, OkHttpClient, Request, RequestBody}
 
 import scala.jdk.CollectionConverters._
 import scala.util.Try
+import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 
 final case class OkHttpClientUtil(
   client: OkHttpClient,
@@ -44,11 +44,8 @@ final case class OkHttpClientUtil(
     r
   }
 
-  def postBody[B: EncodeJson](content: B): RequestBody =
-    RequestBody.create(
-      OkHttpClientUtil.mediaType,
-      EncodeJson.of[B].apply(content).nospaces.getBytes(StandardCharsets.UTF_8)
-    )
+  def postBody(content: Array[Byte]): RequestBody =
+    RequestBody.create(OkHttpClientUtil.mediaType, content)
 
   def create(url: String, post: Option[RequestBody] = None): Unit = {
 
@@ -64,7 +61,7 @@ final case class OkHttpClientUtil(
       )
   }
 
-  def get[T: DecodeJson](
+  def get[T: JsonValueCodec](
     url: String,
     post: Option[RequestBody] = None,
     nested: Boolean = true
@@ -84,18 +81,16 @@ final case class OkHttpClientUtil(
 
     if (resp.isSuccessful)
       if (nested)
-        resp.body().string().decodeEither(DecodeJson.of[T]) match {
-          case Left(e) =>
-            throw new Exception(s"Received invalid response from $url: $e")
-          case Right(t) =>
-            t
+        try readFromArray[T](resp.body().bytes())
+        catch {
+          case e: JsonReaderException =>
+            throw new Exception(s"Received invalid response from $url", e)
         }
       else
-        resp.body().string().decodeEither[T] match {
-          case Left(e) =>
-            throw new Exception(s"Received invalid response from $url: $e")
-          case Right(t) =>
-            t
+        try readFromArray[T](resp.body().bytes())
+        catch {
+          case e: JsonReaderException =>
+            throw new Exception(s"Received invalid response from $url", e)
         }
     else {
       val msg =
@@ -107,7 +102,6 @@ final case class OkHttpClientUtil(
         throw new Exception(msg)
     }
   }
-
 }
 
 object OkHttpClientUtil {

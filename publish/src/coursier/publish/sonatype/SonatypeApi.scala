@@ -1,13 +1,14 @@
 package coursier.publish.sonatype
 
+import java.nio.charset.StandardCharsets
 import java.util.concurrent.ScheduledExecutorService
 
-import argonaut._
-import argonaut.Argonaut._
+import com.github.plokhotnyuk.jsoniter_scala.core._
+import com.github.plokhotnyuk.jsoniter_scala.macros._
 import coursier.core.Authentication
 import coursier.publish.sonatype.logger.SonatypeLogger
 import coursier.util.Task
-import okhttp3.{MediaType, OkHttpClient, RequestBody}
+import okhttp3.{OkHttpClient, RequestBody}
 
 import scala.concurrent.duration.Duration
 
@@ -24,15 +25,17 @@ final case class SonatypeApi(
 
   import SonatypeApi._
 
-  private def postBody[B: EncodeJson](content: B): RequestBody =
-    clientUtil.postBody(Json.obj("data" -> EncodeJson.of[B].apply(content)))
+  private def postBody(content: Array[Byte]): RequestBody =
+    clientUtil.postBody("""{"data":""".getBytes(StandardCharsets.UTF_8) ++ content ++ "}".getBytes(
+      StandardCharsets.UTF_8
+    ))
 
-  private def get[T: DecodeJson](
+  private def get[T: JsonValueCodec](
     url: String,
     post: Option[RequestBody] = None,
     nested: Boolean = true
   ): T =
-    clientUtil.get(url, post, nested)(Response.decode[T]).data
+    clientUtil.get(url, post, nested)(Response.codec[T]).data
 
   private val clientUtil = OkHttpClientUtil(client, authentication, verbosity)
 
@@ -61,7 +64,7 @@ final case class SonatypeApi(
 
     // for w/e reasons, Profiles.Profile.decode isn't implicitly picked
     val task = Task.delay {
-      get(s"$base/staging/profiles")(DecodeJson.ListDecodeJson(Profiles.Profile.decode))
+      get(s"$base/staging/profiles")(Profiles.Profile.listCodec)
         .map(_.profile)
     }
 
@@ -75,41 +78,46 @@ final case class SonatypeApi(
     }
   }
 
-  def rawListProfiles(): Json =
-    get[Json](s"$base/staging/profiles")
+  def rawListProfiles(): RawJson =
+    get(s"$base/staging/profiles")(RawJson.codec)
 
-  def decodeListProfilesResponse(json: Json): Either[Exception, Seq[SonatypeApi.Profile]] =
-    json.as(DecodeJson.ListDecodeJson(Profiles.Profile.decode)).toEither match {
-      case Left(e)  => Left(new Exception(s"Error decoding response: $e"))
-      case Right(l) => Right(l.map(_.profile))
+  def decodeListProfilesResponse(json: RawJson): Either[Exception, Seq[SonatypeApi.Profile]] =
+    try {
+      val l = readFromArray(json.value)(Profiles.Profile.listCodec)
+      Right(l.map(_.profile))
+    }
+    catch {
+      case e: JsonReaderException =>
+        Left(new Exception("Error decoding response", e))
     }
 
   def listProfileRepositories(profileIdOpt: Option[String]): Seq[SonatypeApi.Repository] =
     get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(
-      DecodeJson.ListDecodeJson(RepositoryResponse.decoder)
+      RepositoryResponse.listCodec
     ).map(_.repository)
 
-  def rawListProfileRepositories(profileIdOpt: Option[String]): Json =
-    get[Json](s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))
+  def rawListProfileRepositories(profileIdOpt: Option[String]): RawJson =
+    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(RawJson.codec)
 
-  def decodeListProfileRepositoriesResponse(json: Json)
+  def decodeListProfileRepositoriesResponse(json: RawJson)
     : Either[Exception, Seq[SonatypeApi.Repository]] =
-    json.as(DecodeJson.ListDecodeJson(RepositoryResponse.decoder)).toEither match {
-      case Left(e)  => Left(new Exception(s"Error decoding response: $e"))
-      case Right(l) => Right(l.map(_.repository))
+    try Right(readFromArray(json.value)(RepositoryResponse.listCodec).map(_.repository))
+    catch {
+      case e: JsonReaderException =>
+        Left(new Exception("Error decoding response", e))
     }
 
   def createStagingRepository(profile: Profile, description: String): String =
     get(
       s"${profile.uri}/start",
-      post = Some(postBody(StartRequest(description))(StartRequest.encoder))
-    )(StartResponse.decoder).stagedRepositoryId
+      post = Some(postBody(writeToArray(StartRequest(description))))
+    )(StartResponse.codec).stagedRepositoryId
 
-  def rawCreateStagingRepository(profile: Profile, description: String): Json =
-    get[Json](
+  def rawCreateStagingRepository(profile: Profile, description: String): RawJson =
+    get(
       s"${profile.uri}/start",
-      post = Some(postBody(StartRequest(description))(StartRequest.encoder))
-    )
+      post = Some(postBody(writeToArray(StartRequest(description))))
+    )(RawJson.codec)
 
   private def stagedRepoAction(
     action: String,
@@ -119,9 +127,7 @@ final case class SonatypeApi(
   ): Unit =
     clientUtil.create(
       s"${profile.uri}/$action",
-      post = Some(postBody(StagedRepositoryRequest(description, repositoryId))(
-        StagedRepositoryRequest.encoder
-      ))
+      post = Some(postBody(writeToArray(StagedRepositoryRequest(description, repositoryId))))
     )
 
   def sendCloseStagingRepositoryRequest(
@@ -145,10 +151,13 @@ final case class SonatypeApi(
   ): Unit =
     stagedRepoAction("drop", profile, repositoryId, description)
 
-  def lastActivity(repositoryId: String, action: String) =
-    get[List[Json]](s"$base/staging/repository/$repositoryId/activity", nested = false)
+  def lastActivity(repositoryId: String, action: String): Option[RawJson] =
+    get(s"$base/staging/repository/$repositoryId/activity", nested = false)(
+      SonatypeApi.jsonListCodec
+    )
       .filter { json =>
-        json.field("name").flatMap(_.string).contains(action)
+        val nameOpt = readFromArray(json.value)(SonatypeApi.MaybeHasName.codec).name
+        nameOpt.contains(action)
       }
       .lastOption
 
@@ -208,53 +217,59 @@ object SonatypeApi {
     `type`: String
   )
 
-  def activityErrored(activity: Json): Either[List[String], Unit] =
-    Activity.decoder.decodeJson(activity).toEither match {
-      case Left(e) => ???
-      case Right(a) =>
-        val errors = a.events.filter(_.severity >= 1).map(_.name)
-        if (errors.isEmpty)
-          Right(())
-        else
-          Left(errors)
+  def activityErrored(activity: RawJson): Either[List[String], Unit] =
+    try {
+      val a      = readFromArray(activity.value)(Activity.codec)
+      val errors = a.events.filter(_.severity >= 1).map(_.name)
+      if (errors.isEmpty)
+        Right(())
+      else
+        Left(errors)
+    }
+    catch {
+      case e: JsonReaderException =>
+        throw new Exception("Error decoding activity", e)
     }
 
   // same kind of check as sbt-sonatype
-  def repositoryClosed(activity: Json, repoId: String): Boolean =
-    Activity.decoder.decodeJson(activity).toEither match {
-      case Left(_) => ???
-      case Right(a) =>
-        a.events.exists { e =>
-          e.name == "repositoryClosed" &&
-          e.properties.exists(p => p.name == "id" && p.value == repoId)
-        }
+  def repositoryClosed(activity: RawJson, repoId: String): Boolean =
+    try {
+      val a = readFromArray(activity.value)(Activity.codec)
+      a.events.exists { e =>
+        e.name == "repositoryClosed" &&
+        e.properties.exists(p => p.name == "id" && p.value == repoId)
+      }
     }
-  def repositoryPromoted(activity: Json, repoId: String): Boolean =
-    Activity.decoder.decodeJson(activity).toEither match {
-      case Left(_) => ???
-      case Right(a) =>
-        a.events.exists { e =>
-          e.name == "repositoryReleased" &&
-          e.properties.exists(p => p.name == "id" && p.value == repoId)
-        }
+    catch {
+      case e: JsonReaderException =>
+        throw new Exception("Error decoding activity", e)
+    }
+  def repositoryPromoted(activity: RawJson, repoId: String): Boolean =
+    try {
+      val a = readFromArray(activity.value)(Activity.codec)
+      a.events.exists { e =>
+        e.name == "repositoryReleased" &&
+        e.properties.exists(p => p.name == "id" && p.value == repoId)
+      }
+    }
+    catch {
+      case e: JsonReaderException =>
+        throw new Exception("Error decoding activity", e)
     }
 
   private final case class Activity(name: String, events: List[Activity.Event])
 
   private object Activity {
-    import argonaut.ArgonautShapeless._
     final case class Event(name: String, severity: Int, properties: List[Property])
     final case class Property(name: String, value: String)
-    implicit val decoder = DecodeJson.of[Activity]
+    val codec: JsonValueCodec[Activity] = JsonCodecMaker.make
   }
-
-  private val mediaType = MediaType.parse("application/json")
 
   private final case class Response[T](data: T)
 
   private object Response {
-    import argonaut.ArgonautShapeless._
-    implicit def decode[T: DecodeJson] = DecodeJson.of[Response[T]]
+    def codec[T: JsonValueCodec]: JsonValueCodec[Response[T]] =
+      JsonCodecMaker.make
   }
 
   private object Profiles {
@@ -273,8 +288,7 @@ object SonatypeApi {
     }
 
     object Profile {
-      import argonaut.ArgonautShapeless._
-      implicit val decode = DecodeJson.of[Profile]
+      val listCodec: JsonValueCodec[List[Profile]] = JsonCodecMaker.make
     }
   }
 
@@ -293,19 +307,17 @@ object SonatypeApi {
       )
   }
   private object RepositoryResponse {
-    import argonaut.ArgonautShapeless._
-    implicit val decoder = DecodeJson.of[RepositoryResponse]
+    val listCodec: JsonValueCodec[List[RepositoryResponse]] =
+      JsonCodecMaker.make
   }
 
   private final case class StartRequest(description: String)
   private object StartRequest {
-    import argonaut.ArgonautShapeless._
-    implicit val encoder = EncodeJson.of[StartRequest]
+    implicit val codec: JsonValueCodec[StartRequest] = JsonCodecMaker.make
   }
   private final case class StartResponse(stagedRepositoryId: String)
   private object StartResponse {
-    import argonaut.ArgonautShapeless._
-    implicit val decoder = DecodeJson.of[StartResponse]
+    val codec: JsonValueCodec[StartResponse] = JsonCodecMaker.make
   }
 
   private final case class StagedRepositoryRequest(
@@ -313,8 +325,12 @@ object SonatypeApi {
     stagedRepositoryId: String
   )
   private object StagedRepositoryRequest {
-    import argonaut.ArgonautShapeless._
-    implicit val encoder = EncodeJson.of[StagedRepositoryRequest]
+    implicit val codec: JsonValueCodec[StagedRepositoryRequest] = JsonCodecMaker.make
   }
 
+  private val jsonListCodec: JsonValueCodec[List[RawJson]] = JsonCodecMaker.make
+  private final case class MaybeHasName(name: Option[String])
+  private object MaybeHasName {
+    val codec: JsonValueCodec[MaybeHasName] = JsonCodecMaker.make
+  }
 }

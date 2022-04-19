@@ -15,26 +15,33 @@ object publish extends Cross[Publish](scalaVersions: _*)
 object Deps {
 
   object Version {
-    def coursier = "2.1.0-M5"
+    def coursier      = "2.1.0-M5"
+    def jsoniterScala = "2.13.15"
   }
 
-  def argonautShapeless = ivy"com.github.alexarchambault::argonaut-shapeless_6.2::1.2.0"
-  def catsCore          = ivy"org.typelevel::cats-core:2.7.0"
-  def collectionCompat  = ivy"org.scala-lang.modules::scala-collection-compat::2.6.0"
-  def coursierCache     = ivy"io.get-coursier::coursier-cache:${Version.coursier}"
-  def coursierCore      = ivy"io.get-coursier::coursier-core:${Version.coursier}"
-  def okhttp            = ivy"com.squareup.okhttp3:okhttp:3.14.9"
-  def utest             = ivy"com.lihaoyi::utest::0.7.10"
+  def catsCore         = ivy"org.typelevel::cats-core:2.7.0"
+  def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.6.0"
+  def coursierCache    = ivy"io.get-coursier::coursier-cache:${Version.coursier}"
+  def coursierCore     = ivy"io.get-coursier::coursier-core:${Version.coursier}"
+  def jsoniterCore =
+    ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Version.jsoniterScala}"
+  def jsoniterMacros =
+    ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Version.jsoniterScala}"
+  def okhttp = ivy"com.squareup.okhttp3:okhttp:3.14.9"
+  def utest  = ivy"com.lihaoyi::utest::0.7.10"
 }
 
 class Publish(val crossScalaVersion: String) extends CrossScalaModule with Published {
   def ivyDeps = super.ivyDeps() ++ Seq(
-    Deps.argonautShapeless,
     Deps.catsCore,
     Deps.coursierCache,
     Deps.coursierCore,
     Deps.collectionCompat,
+    Deps.jsoniterCore,
     Deps.okhttp
+  )
+  def compileIvyDeps = super.compileIvyDeps() ++ Seq(
+    Deps.jsoniterMacros
   )
   def javacOptions = super.javacOptions() ++ Seq(
     "--release",
