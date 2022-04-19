@@ -16,7 +16,7 @@ jobs:
         fetch-depth: 0
         submodules: true
     - uses: coursier/cache-action@v6.3
-    - uses: coursier/setup-action@v1.2.0-M1
+    - uses: coursier/setup-action@v1.2.0-M3
       with:
         jvm: temurin:17
     - name: Test
@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 0
         submodules: true
     - uses: coursier/cache-action@v6.3
-    - uses: coursier/setup-action@v1.2.0-M1
+    - uses: coursier/setup-action@v1.2.0-M3
       with:
         jvm: 8
         apps: scalafmt:3.1.1
@@ -46,7 +46,7 @@ jobs:
         fetch-depth: 0
         submodules: true
     - uses: coursier/cache-action@v6.3
-    - uses: coursier/setup-action@v1.2.0-M1
+    - uses: coursier/setup-action@v1.2.0-M3
       with:
         jvm: temurin:17
     - run: .github/scripts/gpg-setup.sh
