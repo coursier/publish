@@ -8,12 +8,12 @@ import com.github.plokhotnyuk.jsoniter_scala.macros._
 import coursier.core.Authentication
 import coursier.publish.sonatype.logger.SonatypeLogger
 import coursier.util.Task
-import okhttp3.{OkHttpClient, RequestBody}
+import sttp.client3._
 
 import scala.concurrent.duration.Duration
 
 final case class SonatypeApi(
-  client: OkHttpClient,
+  backend: SttpBackend[Identity, Any],
   base: String,
   authentication: Option[Authentication],
   verbosity: Int,
@@ -25,19 +25,20 @@ final case class SonatypeApi(
 
   import SonatypeApi._
 
-  private def postBody(content: Array[Byte]): RequestBody =
-    clientUtil.postBody("""{"data":""".getBytes(StandardCharsets.UTF_8) ++ content ++ "}".getBytes(
+  private def postBody(content: Array[Byte]): Array[Byte] =
+    """{"data":""".getBytes(StandardCharsets.UTF_8) ++ content ++ "}".getBytes(
       StandardCharsets.UTF_8
-    ))
+    )
 
   private def get[T: JsonValueCodec](
     url: String,
-    post: Option[RequestBody] = None,
-    nested: Boolean = true
+    post: Option[Array[Byte]] = None,
+    nested: Boolean = true,
+    isJson: Boolean = false
   ): T =
-    clientUtil.get(url, post, nested)(Response.codec[T]).data
+    clientUtil.get(url, post, nested, isJson)(Response.codec[T]).data
 
-  private val clientUtil = OkHttpClientUtil(client, authentication, verbosity)
+  private val clientUtil = HttpClientUtil(backend, authentication, verbosity)
 
   private def withRetry[T](task: Int => Task[T]): Task[T] = {
 
@@ -110,13 +111,15 @@ final case class SonatypeApi(
   def createStagingRepository(profile: Profile, description: String): String =
     get(
       s"${profile.uri}/start",
-      post = Some(postBody(writeToArray(StartRequest(description))))
+      post = Some(postBody(writeToArray(StartRequest(description)))),
+      isJson = true
     )(StartResponse.codec).stagedRepositoryId
 
   def rawCreateStagingRepository(profile: Profile, description: String): RawJson =
     get(
       s"${profile.uri}/start",
-      post = Some(postBody(writeToArray(StartRequest(description))))
+      post = Some(postBody(writeToArray(StartRequest(description)))),
+      isJson = true
     )(RawJson.codec)
 
   private def stagedRepoAction(
@@ -127,7 +130,8 @@ final case class SonatypeApi(
   ): Unit =
     clientUtil.create(
       s"${profile.uri}/$action",
-      post = Some(postBody(writeToArray(StagedRepositoryRequest(description, repositoryId))))
+      post = Some(postBody(writeToArray(StagedRepositoryRequest(description, repositoryId)))),
+      isJson = true
     )
 
   def sendCloseStagingRepositoryRequest(

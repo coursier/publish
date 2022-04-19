@@ -14,8 +14,6 @@ import scala.util.control.NonFatal
 
 final case class HttpURLConnectionUpload(urlSuffix: String) extends Upload {
 
-  import coursier.publish.download.OkhttpDownload.TryOps
-
   def upload(
     url: String,
     authentication: Option[Authentication],
@@ -122,7 +120,7 @@ final case class HttpURLConnectionUpload(urlSuffix: String) extends Upload {
     logger.uploaded(
       url,
       loggingIdOpt,
-      res.toEither.fold(e => Some(new Upload.Error.UploadError(url, e)), x => x)
+      res.fold(e => Some(new Upload.Error.UploadError(url, e)), x => x)
     )
 
     res.get
