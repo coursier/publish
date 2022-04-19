@@ -19,7 +19,6 @@ object Deps {
     def jsoniterScala = "2.13.15"
   }
 
-  def catsCore         = ivy"org.typelevel::cats-core:2.7.0"
   def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.6.0"
   def coursierCache    = ivy"io.get-coursier::coursier-cache:${Version.coursier}"
   def coursierCore     = ivy"io.get-coursier::coursier-core:${Version.coursier}"
@@ -33,7 +32,6 @@ object Deps {
 
 class Publish(val crossScalaVersion: String) extends CrossScalaModule with Published {
   def ivyDeps = super.ivyDeps() ++ Seq(
-    Deps.catsCore,
     Deps.coursierCache,
     Deps.coursierCore,
     Deps.collectionCompat,
