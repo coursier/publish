@@ -42,35 +42,6 @@ object PublishRepository {
       )
   }
 
-  final case class Bintray(
-    user: String,
-    repository: String,
-    package0: String,
-    apiKey: String,
-    overrideAuthOpt: Option[Authentication]
-  ) extends PublishRepository {
-
-    def authentication: Authentication =
-      overrideAuthOpt.getOrElse(Authentication(user, apiKey))
-
-    def releaseRepo: MavenRepository =
-      MavenRepository(
-        s"https://api.bintray.com/maven/$user/$repository/$package0",
-        authentication = Some(authentication)
-      )
-    def snapshotRepo: MavenRepository =
-      releaseRepo
-
-    def readReleaseRepo: MavenRepository =
-      MavenRepository(s"https://dl.bintray.com/$user/$repository")
-    def readSnapshotRepo: MavenRepository =
-      readReleaseRepo
-
-    def withAuthentication(auth: Authentication): Bintray =
-      copy(overrideAuthOpt = Some(auth))
-
-  }
-
   final case class GitHub(
     username: String,
     repo: String,
@@ -129,13 +100,5 @@ object PublishRepository {
 
   def gitHub(username: String, repo: String, token: String): PublishRepository =
     GitHub(username, repo, token, None)
-
-  def bintray(
-    user: String,
-    repository: String,
-    package0: String,
-    apiKey: String
-  ): PublishRepository =
-    Bintray(user, repository, package0, apiKey, None)
 
 }
