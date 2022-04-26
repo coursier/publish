@@ -77,9 +77,19 @@ object Hooks {
           // TODO Print sensible error messages if anything goes wrong here (commands to finish promoting, etc.)
           api.sendCloseStagingRepositoryRequest(profile, repoId, "closing repository")
           for {
-            _ <- api.waitForStatus(profile.id, repoId, "closed", 20, 3.seconds, 1.5, es)
+            _ <-
+              api.waitForStatus(profile.id, repoId, "closed", Some("close"), 20, 3.seconds, 1.5, es)
             _ = api.sendPromoteStagingRepositoryRequest(profile, repoId, "promoting repository")
-            _ <- api.waitForStatus(profile.id, repoId, "released", 20, 3.seconds, 1.5, es)
+            _ <- api.waitForStatus(
+              profile.id,
+              repoId,
+              "released",
+              Some("release"),
+              20,
+              3.seconds,
+              1.5,
+              es
+            )
             _ = api.sendDropStagingRepositoryRequest(profile, repoId, "dropping repository")
           } yield ()
       }

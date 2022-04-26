@@ -38,16 +38,22 @@ private[sonatype] final case class HttpClientUtil(
       else
         Nil
 
-    basicRequest
-      .body(post.getOrElse(Array.emptyByteArray))
+    val req = basicRequest
       .header(
-        // ???
         "Accept",
         "application/json,application/vnd.siesta-error-v1+json,application/vnd.siesta-validation-errors-v1+json"
       )
       .headers(authHeaders ++ contentTypeHeaders: _*)
       .response(asByteArrayAlways)
-      .get(uri)
+
+    post match {
+      case Some(body) =>
+        req
+          .body(post.getOrElse(Array.emptyByteArray))
+          .post(uri)
+      case None =>
+        req.get(uri)
+    }
   }
 
   def create(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false): Unit = {
