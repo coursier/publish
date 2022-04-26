@@ -11,6 +11,7 @@ import coursier.util.Task
 import sttp.client3._
 
 import scala.concurrent.duration.Duration
+import scala.util.control.NonFatal
 
 final case class SonatypeApi(
   backend: SttpBackend[Identity, Any],
@@ -36,7 +37,10 @@ final case class SonatypeApi(
     nested: Boolean = true,
     isJson: Boolean = false
   ): T =
-    clientUtil.get(url, post, nested, isJson)(Response.codec[T]).data
+    if (nested)
+      clientUtil.get(url, post, nested, isJson)(Response.codec[T]).data
+    else
+      clientUtil.get[T](url, post, nested, isJson)
 
   private val clientUtil = HttpClientUtil(backend, authentication, verbosity)
 
@@ -55,28 +59,22 @@ final case class SonatypeApi(
 
   def listProfiles(logger: SonatypeLogger = SonatypeLogger.nop): Task[Seq[SonatypeApi.Profile]] = {
 
-    def before(attempt: Int) = Task.delay {
-      logger.listingProfiles(attempt, retryOnTimeout)
-    }
-
-    def after(errorOpt: Option[Throwable]) = Task.delay {
-      logger.listedProfiles(errorOpt)
-    }
-
     // for w/e reasons, Profiles.Profile.decode isn't implicitly picked
-    val task = Task.delay {
-      get(s"$base/staging/profiles")(Profiles.Profile.listCodec)
-        .map(_.profile)
+    def task(attempt: Int) = Task.delay {
+      logger.listingProfiles(attempt, retryOnTimeout)
+      val res =
+        try get(s"$base/staging/profiles")(Profiles.Profile.listCodec)
+          .map(_.profile)
+        catch {
+          case NonFatal(e) =>
+            logger.listedProfiles(Some(e))
+            throw e
+        }
+      logger.listedProfiles(None)
+      res
     }
 
-    withRetry { attempt =>
-      for {
-        _   <- before(attempt)
-        a   <- task.attempt
-        _   <- after(a.left.toOption)
-        res <- Task.fromEither(a)
-      } yield res
-    }
+    withRetry(task)
   }
 
   def rawListProfiles(): RawJson =
@@ -169,6 +167,7 @@ final case class SonatypeApi(
     profileId: String,
     repositoryId: String,
     status: String,
+    checkActivityOpt: Option[String],
     maxAttempt: Int,
     initialDelay: Duration,
     backoffFactor: Double,
@@ -189,9 +188,24 @@ final case class SonatypeApi(
               case `status` =>
                 Task.point(())
               case other =>
-                if (attempt < maxAttempt)
-                  task(attempt + 1, backoffFactor * nextDelay, totalDelay + nextDelay)
-                    .schedule(nextDelay, es)
+                if (attempt < maxAttempt) {
+                  val errors = checkActivityOpt match {
+                    case Some(checkActivity) =>
+                      val lastActivity0 = lastActivity(repositoryId, checkActivity)
+                      lastActivity0.toSeq.map(activityErrored).flatMap(_.left.toOption)
+                    case None =>
+                      Nil
+                  }
+                  if (errors.isEmpty)
+                    task(attempt + 1, backoffFactor * nextDelay, totalDelay + nextDelay)
+                      .schedule(nextDelay, es)
+                  else
+                    Task.fail(
+                      new Exception(
+                        s"Error waiting for repository $repositoryId to be $status: ${errors.mkString(", ")}"
+                      )
+                    )
+                }
                 else
                   // FIXME totalDelay doesn't include the duration of the requests themselves (only the time between)
                   Task.fail(
@@ -223,8 +237,10 @@ object SonatypeApi {
 
   def activityErrored(activity: RawJson): Either[List[String], Unit] =
     try {
-      val a      = readFromArray(activity.value)(Activity.codec)
-      val errors = a.events.filter(_.severity >= 1).map(_.name)
+      val a = readFromArray(activity.value)(Activity.codec)
+      val errors = a.events
+        .filter(_.severity >= 1)
+        .map(e => e.propertiesMap.getOrElse("failureMessage", e.name))
       if (errors.isEmpty)
         Right(())
       else
@@ -264,7 +280,10 @@ object SonatypeApi {
   private final case class Activity(name: String, events: List[Activity.Event])
 
   private object Activity {
-    final case class Event(name: String, severity: Int, properties: List[Property])
+    final case class Event(name: String, severity: Int, properties: List[Property]) {
+      lazy val propertiesMap: Map[String, String] =
+        properties.map(p => (p.name, p.value)).toMap
+    }
     final case class Property(name: String, value: String)
     val codec: JsonValueCodec[Activity] = JsonCodecMaker.make
   }
