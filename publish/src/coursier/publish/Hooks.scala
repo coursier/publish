@@ -26,7 +26,7 @@ trait Hooks {
 
 object Hooks {
 
-  private final class Sonatype(
+  final case class Sonatype(
     repo: PublishRepository.Sonatype,
     api: SonatypeApi,
     out: PrintStream,
@@ -35,7 +35,7 @@ object Hooks {
     es: ScheduledExecutorService
   ) extends Hooks {
 
-    val logger =
+    private def logger =
       if (batch)
         new BatchSonatypeLogger(out, verbosity)
       else
