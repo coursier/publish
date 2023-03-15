@@ -57,18 +57,27 @@ final case class HttpURLConnectionUpload(urlSuffix: String) extends Upload {
         else if (code / 100 == 2)
           None
         else {
-          es = conn.getErrorStream
-          val buf  = Array.ofDim[Byte](16384)
-          val baos = new ByteArrayOutputStream
-          var read = -1
-          while ({
-            read = es.read(buf); read >= 0
-          })
-            baos.write(buf, 0, read)
-          es.close()
-          // FIXME Adjust charset with headers?
-          val content =
-            Try(new String(baos.toByteArray, StandardCharsets.UTF_8)).toOption.getOrElse("")
+          val content = {
+            es = Option(conn.getErrorStream)
+              .orElse(Try(conn.getInputStream).toOption).orNull
+
+            if (es != null) {
+              val buf  = Array.ofDim[Byte](16384)
+              val baos = new ByteArrayOutputStream
+              var read = -1
+              while ({
+                read = es.read(buf)
+                read >= 0
+              })
+                baos.write(buf, 0, read)
+              es.close()
+              // FIXME Adjust charset with headers?
+              Try(new String(baos.toByteArray, StandardCharsets.UTF_8))
+                .getOrElse("")
+            }
+            else ""
+          }
+
           Some(
             new Upload.Error.HttpError(
               code,
