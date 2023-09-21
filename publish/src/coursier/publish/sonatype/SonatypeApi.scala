@@ -10,7 +10,9 @@ import coursier.publish.sonatype.logger.SonatypeLogger
 import coursier.util.Task
 import sttp.client3._
 
+import scala.annotation.tailrec
 import scala.concurrent.duration.Duration
+import scala.util.Try
 import scala.util.control.NonFatal
 
 final case class SonatypeApi(
@@ -18,7 +20,8 @@ final case class SonatypeApi(
   base: String,
   authentication: Option[Authentication],
   verbosity: Int,
-  retryOnTimeout: Int = 3
+  retryOnTimeout: Int = 3,
+  stagingRepoRetries: Int = 3
 ) {
 
   // vaguely inspired by https://github.com/lihaoyi/mill/blob/7b4ced648ecd9b79b3a16d67552f0bb69f4dd543/scalalib/src/mill/scalalib/publish/SonatypeHttpApi.scala
@@ -125,12 +128,26 @@ final case class SonatypeApi(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    clientUtil.create(
-      s"${profile.uri}/$action",
-      post = Some(postBody(writeToArray(StagedRepositoryRequest(description, repositoryId)))),
-      isJson = true
-    )
+  ): Unit = {
+    val url  = s"${profile.uri}/$action"
+    val body = postBody(writeToArray(StagedRepositoryRequest(description, repositoryId)))
+    @tailrec
+    def sendRequest(attempt: Int): Unit = {
+      val resp = clientUtil.create(url, post = Some(body), isJson = true)
+
+      if (!resp.code.isSuccess) {
+        if (attempt >= stagingRepoRetries)
+          throw new Exception(
+            s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
+          )
+
+        Thread.sleep(1000 * attempt)
+        sendRequest(attempt + 1)
+      }
+    }
+
+    sendRequest(1)
+  }
 
   def sendCloseStagingRepositoryRequest(
     profile: Profile,

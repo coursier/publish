@@ -31,25 +31,25 @@ object Deps {
 }
 
 class Publish(val crossScalaVersion: String) extends CrossScalaModule with Published {
-  def ivyDeps = super.ivyDeps() ++ Seq(
+  override def ivyDeps = super.ivyDeps() ++ Seq(
     Deps.coursierCache,
     Deps.coursierCore,
     Deps.collectionCompat,
     Deps.jsoniterCore,
     Deps.sttp
   )
-  def compileIvyDeps = super.compileIvyDeps() ++ Seq(
+  override def compileIvyDeps = super.compileIvyDeps() ++ Seq(
     Deps.jsoniterMacros
   )
-  def javacOptions = super.javacOptions() ++ Seq(
+  override def javacOptions = super.javacOptions() ++ Seq(
     "--release",
     "8"
   )
   object test extends Tests {
-    def ivyDeps = super.ivyDeps() ++ Seq(
+    override def ivyDeps = super.ivyDeps() ++ Seq(
       Deps.utest
     )
-    def testFramework = "utest.runner.Framework"
+    override def testFramework = "utest.runner.Framework"
   }
 }
 
