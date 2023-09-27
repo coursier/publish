@@ -1,6 +1,7 @@
 package src.coursier.publish.sonatype
 
 import coursier.publish.sonatype.SonatypeApi
+import coursier.publish.util.EmaRetryParams
 import sttp.client3.testing.SttpBackendStub
 
 import utest._
@@ -22,7 +23,7 @@ object SonatypeTests extends TestSuite {
           authentication = None,
           verbosity = 0,
           retryOnTimeout = 1,
-          stagingRepoRetries = 20
+          stagingRepoRetryParams = EmaRetryParams(20, 10000L, 2.0f)
         )
 
         sonatypeApi20.sendPromoteStagingRepositoryRequest(

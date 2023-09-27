@@ -7,11 +7,12 @@ import com.github.plokhotnyuk.jsoniter_scala.core._
 import com.github.plokhotnyuk.jsoniter_scala.macros._
 import coursier.core.Authentication
 import coursier.publish.sonatype.logger.SonatypeLogger
+import coursier.publish.util.EmaRetryParams
 import coursier.util.Task
 import sttp.client3._
 
 import scala.annotation.tailrec
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, DurationInt}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -21,7 +22,7 @@ final case class SonatypeApi(
   authentication: Option[Authentication],
   verbosity: Int,
   retryOnTimeout: Int = 3,
-  stagingRepoRetries: Int = 3
+  stagingRepoRetryParams: EmaRetryParams = EmaRetryParams(3, 10.seconds.toMillis, 2.0f)
 ) {
 
   // vaguely inspired by https://github.com/lihaoyi/mill/blob/7b4ced648ecd9b79b3a16d67552f0bb69f4dd543/scalalib/src/mill/scalalib/publish/SonatypeHttpApi.scala
@@ -132,21 +133,21 @@ final case class SonatypeApi(
     val url  = s"${profile.uri}/$action"
     val body = postBody(writeToArray(StagedRepositoryRequest(description, repositoryId)))
     @tailrec
-    def sendRequest(attempt: Int): Unit = {
+    def sendRequest(attempt: Int, waitDurationMs: Long): Unit = {
       val resp = clientUtil.createResponse(url, post = Some(body), isJson = true)
 
       if (!resp.code.isSuccess) {
-        if (attempt >= stagingRepoRetries)
+        if (attempt >= stagingRepoRetryParams.attempts)
           throw new Exception(
             s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
           )
 
-        Thread.sleep(1000 * attempt)
-        sendRequest(attempt + 1)
+        Thread.sleep(waitDurationMs)
+        sendRequest(attempt + 1, stagingRepoRetryParams.update(waitDurationMs))
       }
     }
 
-    sendRequest(1)
+    sendRequest(1, stagingRepoRetryParams.initialWaitDurationMs)
   }
 
   def sendCloseStagingRepositoryRequest(
