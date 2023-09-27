@@ -1,4 +1,4 @@
-package src.coursier.publish.sonatype
+package coursier.publish.sonatype
 
 import coursier.publish.sonatype.SonatypeApi
 import coursier.publish.util.EmaRetryParams
