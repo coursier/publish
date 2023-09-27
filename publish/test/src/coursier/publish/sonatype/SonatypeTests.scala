@@ -1,6 +1,5 @@
 package coursier.publish.sonatype
 
-import coursier.publish.sonatype.SonatypeApi
 import coursier.publish.util.EmaRetryParams
 import sttp.client3.testing.SttpBackendStub
 
