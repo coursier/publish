@@ -56,7 +56,15 @@ private[sonatype] final case class HttpClientUtil(
     }
   }
 
-  def create(
+  def create(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false): Unit = {
+    val resp = createResponse(url, post, isJson)
+    if (resp.code.code != 201)
+      throw new Exception(
+        s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
+      )
+  }
+
+  def createResponse(
     url: String,
     post: Option[Array[Byte]] = None,
     isJson: Boolean = false

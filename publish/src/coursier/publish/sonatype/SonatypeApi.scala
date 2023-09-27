@@ -133,7 +133,7 @@ final case class SonatypeApi(
     val body = postBody(writeToArray(StagedRepositoryRequest(description, repositoryId)))
     @tailrec
     def sendRequest(attempt: Int): Unit = {
-      val resp = clientUtil.create(url, post = Some(body), isJson = true)
+      val resp = clientUtil.createResponse(url, post = Some(body), isJson = true)
 
       if (!resp.code.isSuccess) {
         if (attempt >= stagingRepoRetries)
