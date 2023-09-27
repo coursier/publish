@@ -23,7 +23,7 @@ object SonatypeTests extends TestSuite {
           authentication = None,
           verbosity = 0,
           retryOnTimeout = 1,
-          stagingRepoRetryParams = EmaRetryParams(20, 10000L, 2.0f)
+          stagingRepoRetryParams = EmaRetryParams(20, 100L, 1.0f)
         )
 
         sonatypeApi20.sendPromoteStagingRepositoryRequest(
