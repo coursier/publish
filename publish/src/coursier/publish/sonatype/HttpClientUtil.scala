@@ -57,17 +57,25 @@ private[sonatype] final case class HttpClientUtil(
   }
 
   def create(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false): Unit = {
-
-    if (verbosity >= 1)
-      Console.err.println(s"Getting $url")
-    val resp = request(url, post, isJson).send(backend)
-    if (verbosity >= 1)
-      Console.err.println(s"Done: $url")
-
+    val resp = createResponse(url, post, isJson)
     if (resp.code.code != 201)
       throw new Exception(
         s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
       )
+  }
+
+  def createResponse(
+    url: String,
+    post: Option[Array[Byte]] = None,
+    isJson: Boolean = false
+  ): Response[Array[Byte]] = {
+    if (verbosity >= 1)
+      Console.err.println(s"Getting $url")
+    val resp = request(url, post, isJson).send(backend)
+    if (verbosity >= 1)
+      Console.err.println(s"Got HTTP ${resp.code.code} from $url")
+
+    resp
   }
 
   def get[T: JsonValueCodec](
