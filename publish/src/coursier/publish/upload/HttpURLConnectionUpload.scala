@@ -12,7 +12,11 @@ import scala.jdk.CollectionConverters._
 import scala.util.Try
 import scala.util.control.NonFatal
 
-final case class HttpURLConnectionUpload(urlSuffix: String) extends Upload {
+final case class HttpURLConnectionUpload(
+  urlSuffix: String,
+  readTimeoutMsOpt: Option[Int],
+  connectTimeoutMsOpt: Option[Int]
+) extends Upload {
 
   def upload(
     url: String,
@@ -29,6 +33,10 @@ final case class HttpURLConnectionUpload(urlSuffix: String) extends Upload {
       val conn = url0.openConnection().asInstanceOf[HttpURLConnection]
 
       conn.setRequestMethod("PUT")
+      readTimeoutMsOpt
+        .foreach(conn.setReadTimeout)
+      connectTimeoutMsOpt
+        .foreach(conn.setConnectTimeout)
 
       for (auth <- authentication; (k, v) <- auth.allHttpHeaders)
         conn.setRequestProperty(k, v)
@@ -138,7 +146,22 @@ final case class HttpURLConnectionUpload(urlSuffix: String) extends Upload {
 
 object HttpURLConnectionUpload {
   def create(): Upload =
-    HttpURLConnectionUpload("")
+    HttpURLConnectionUpload("", None, None)
   def create(urlSuffix: String): Upload =
-    HttpURLConnectionUpload(urlSuffix)
+    HttpURLConnectionUpload(urlSuffix, None, None)
+
+  /** Create a HttpURLConnectionUpload with a read timeout
+    * @param readTimeoutMs
+    *   the response read timeout in miliseconds
+    * @param connetionTimeoutMs
+    *   the connection timeout in miliseconds
+    * @param urlSuffix
+    *   the suffix to append to the url
+    */
+  def create(
+    readTimeoutMs: Option[Int],
+    connectionTimeoutMs: Option[Int],
+    urlSuffix: String = ""
+  ): Upload =
+    HttpURLConnectionUpload(urlSuffix, readTimeoutMs, connectionTimeoutMs)
 }
