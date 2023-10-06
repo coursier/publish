@@ -46,10 +46,10 @@ object SonatypeTests extends TestSuite {
         )
 
         try sonatypeApi3.sendPromoteStagingRepositoryRequest(
-          SonatypeApi.Profile("id", "name", "uri"),
-          "repo",
-          "description"
-        )
+            SonatypeApi.Profile("id", "name", "uri"),
+            "repo",
+            "description"
+          )
         catch {
           case e: Exception
               if e.getMessage == "Failed to get uri/promote (http status: 500, response: Internal server error)" =>
