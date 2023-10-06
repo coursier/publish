@@ -7,7 +7,7 @@ import mill.scalalib._
 import scala.concurrent.duration.{Duration, DurationInt}
 
 def scala213      = "2.13.8"
-def scala212      = "2.12.15"
+def scala212      = "2.12.18"
 def scalaVersions = Seq(scala213, scala212)
 
 object publish extends Cross[Publish](scalaVersions: _*)
