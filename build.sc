@@ -19,7 +19,7 @@ object Deps {
     def jsoniterScala = "2.13.15"
   }
 
-  def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.6.0"
+  def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.12.0"
   def coursierCache    = ivy"io.get-coursier::coursier-cache:${Version.coursier}"
   def coursierCore     = ivy"io.get-coursier::coursier-core:${Version.coursier}"
   def jsoniterCore =
