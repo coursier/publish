@@ -1,4 +1,4 @@
-import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.1.4`
+import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.0`
 import de.tobiasroeser.mill.vcs.version._
 
 import mill._
@@ -6,11 +6,10 @@ import mill.scalalib._
 
 import scala.concurrent.duration.{Duration, DurationInt}
 
-def scala213      = "2.13.14"
-def scala212      = "2.12.19"
-def scalaVersions = Seq(scala213, scala212)
+def scala213 = "2.13.14"
+def scala212 = "2.12.19"
 
-object publish extends Cross[Publish](scalaVersions: _*)
+object publish extends Cross[Publish](scala213, scala212)
 
 object Deps {
 
@@ -30,7 +29,7 @@ object Deps {
   def utest = ivy"com.lihaoyi::utest::0.7.10"
 }
 
-class Publish(val crossScalaVersion: String) extends CrossScalaModule with Published {
+trait Publish extends CrossScalaModule with Published {
   def ivyDeps = super.ivyDeps() ++ Seq(
     Deps.coursierCache,
     Deps.coursierCore,
@@ -45,7 +44,7 @@ class Publish(val crossScalaVersion: String) extends CrossScalaModule with Publi
     "--release",
     "8"
   )
-  object test extends Tests {
+  object test extends ScalaTests {
     def ivyDeps = super.ivyDeps() ++ Seq(
       Deps.utest
     )
