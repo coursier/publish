@@ -6,8 +6,8 @@ import mill.scalalib._
 
 import scala.concurrent.duration.{Duration, DurationInt}
 
-def scala213      = "2.13.14"
-def scala212      = "2.12.19"
+def scala213 = "2.13.14"
+def scala212 = "2.12.19"
 
 object publish extends Cross[Publish](scala213, scala212)
 
