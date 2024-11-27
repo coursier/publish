@@ -68,7 +68,7 @@ final case class SonatypeApi(
       logger.listingProfiles(attempt, retryOnTimeout)
       val res =
         try get(s"$base/staging/profiles")(Profiles.Profile.listCodec)
-          .map(_.profile)
+            .map(_.profile)
         catch {
           case NonFatal(e) =>
             logger.listedProfiles(Some(e))
