@@ -25,7 +25,7 @@ object Deps {
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Version.jsoniterScala}"
   def jsoniterMacros =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Version.jsoniterScala}"
-  def sttp  = ivy"com.softwaremill.sttp.client3::core:3.5.1"
+  def sttp  = ivy"com.softwaremill.sttp.client3::core:3.10.1"
   def utest = ivy"com.lihaoyi::utest::0.7.10"
 }
 
