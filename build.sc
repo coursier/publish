@@ -14,8 +14,8 @@ object publish extends Cross[Publish](scala213, scala212)
 object Deps {
 
   object Version {
-    def coursier      = "2.1.14"
-    def jsoniterScala = "2.31.1"
+    def coursier      = "2.1.20"
+    def jsoniterScala = "2.31.3"
   }
 
   def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.12.0"
@@ -25,8 +25,8 @@ object Deps {
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Version.jsoniterScala}"
   def jsoniterMacros =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Version.jsoniterScala}"
-  def sttp  = ivy"com.softwaremill.sttp.client3::core:3.5.1"
-  def utest = ivy"com.lihaoyi::utest::0.7.10"
+  def sttp  = ivy"com.softwaremill.sttp.client3::core:3.10.1"
+  def utest = ivy"com.lihaoyi::utest::0.8.4"
 }
 
 trait Publish extends CrossScalaModule with Published {
