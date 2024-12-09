@@ -116,7 +116,7 @@ object Pom {
                 <name>{d.name}</name>
                 <url>{d.url}</url>
               </developer>
-          // + optional mail
+            // + optional mail
           }
         }
         </developers>
@@ -131,7 +131,9 @@ object Pom {
                   <groupId>{depOrg.value}</groupId>
                   <artifactId>{depName.value}</artifactId>
                   <version>{ver}</version>
-                  {confOpt.fold[NodeSeq](Nil)(c => <scope>{c}</scope>)}
+                  {
+                confOpt.fold[NodeSeq](Nil)(c => <scope>{c}</scope>)
+              }
                 </dependency>
           }
         }

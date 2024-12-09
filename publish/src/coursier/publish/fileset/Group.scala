@@ -154,7 +154,8 @@ object Group {
       now: Instant
     ): Module =
       if (
-        org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty && developers.isEmpty && homePage.isEmpty && gitDomainPath.isEmpty
+        org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty && developers
+          .isEmpty && homePage.isEmpty && gitDomainPath.isEmpty
       )
         this
       else
