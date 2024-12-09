@@ -1,6 +1,6 @@
 package coursier.publish
 
-import coursier.core.{Configuration, ModuleName, Organization, Type}
+import coursier.core.{Configuration, MinimizedExclusions, ModuleName, Organization, Type}
 
 import scala.collection.mutable
 import scala.xml.{Elem, Node, NodeSeq}
@@ -53,7 +53,13 @@ object Pom {
     url: Option[String] = None,
     name: Option[String] = None,
     // TODO Accept full-fledged coursier.Dependency
-    dependencies: Seq[(Organization, ModuleName, String, Option[Configuration])] = Nil,
+    dependencies: Seq[(
+      Organization,
+      ModuleName,
+      String,
+      Option[Configuration],
+      MinimizedExclusions
+    )] = Nil,
     license: Option[License] = None,
     scm: Option[Scm] = None,
     developers: Seq[Developer] = Nil
@@ -126,13 +132,21 @@ object Pom {
         <dependencies>
           {
           dependencies.map {
-            case (depOrg, depName, ver, confOpt) =>
+            case (depOrg, depName, ver, confOpt, exclusions) =>
               <dependency>
                   <groupId>{depOrg.value}</groupId>
                   <artifactId>{depName.value}</artifactId>
                   <version>{ver}</version>
+                  {confOpt.fold[NodeSeq](Nil)(c => <scope>{c}</scope>)}
                   {
-                confOpt.fold[NodeSeq](Nil)(c => <scope>{c}</scope>)
+                if (exclusions.nonEmpty) <exclusions>{
+                  exclusions.data.toSet().foreach { case (org, module) =>
+                    <exclusion>
+                      <groupId>{org.value}</groupId>
+                      <artifactId>{module.value}</artifactId>
+                    </exclusion>
+                  }
+                }</exclusions>
               }
                 </dependency>
           }
