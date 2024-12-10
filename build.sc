@@ -101,8 +101,6 @@ private def doPublishSonatype(
       "--yes",
       "--pinentry-mode",
       "loopback",
-      "--passphrase",
-      pgpPassword,
       "--armor",
       "--use-agent"
     ),

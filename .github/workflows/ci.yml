@@ -51,10 +51,9 @@ jobs:
         jvm: temurin:17
     - run: .github/scripts/gpg-setup.sh
       env:
-        PGP_SECRET: ${{ secrets.PGP_SECRET }}
+        PGP_SECRET: ${{ secrets.PUBLISH_SECRET_KEY }}
     - name: Release
       run: ./mill -i publishSonatype --tasks __.publishArtifacts
       env:
-        PGP_PASSWORD: ${{ secrets.PGP_PASSPHRASE }}
-        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
-        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+        SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
+        SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
