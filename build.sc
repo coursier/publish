@@ -94,7 +94,6 @@ private def doPublishSonatype(
     signed = true,
     gpgArgs = Seq(
       "--detach-sign",
-      "--batch=true",
       "--yes",
       "--pinentry-mode",
       "loopback",
