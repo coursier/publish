@@ -56,10 +56,12 @@ def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]) =
   T.command {
     val timeout     = 10.minutes
     val credentials = sys.env("SONATYPE_USERNAME") + ":" + sys.env("SONATYPE_PASSWORD")
+    val pgpPassword = sys.env("PGP_PASSWORD")
     val data        = T.sequence(tasks.value)()
 
     doPublishSonatype(
       credentials = credentials,
+      pgpPassword = pgpPassword,
       data = data,
       timeout = timeout,
       log = T.ctx().log
@@ -68,6 +70,7 @@ def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]) =
 
 private def doPublishSonatype(
   credentials: String,
+  pgpPassword: String,
   data: Seq[PublishModule.PublishData],
   timeout: Duration,
   log: mill.api.Logger
@@ -99,7 +102,7 @@ private def doPublishSonatype(
       "--pinentry-mode",
       "loopback",
       "--passphrase",
-      "",
+      pgpPassword,
       "--armor",
       "--use-agent"
     ),

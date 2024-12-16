@@ -54,5 +54,6 @@ jobs:
     - name: Release
       run: ./mill -i publishSonatype --tasks __.publishArtifacts
       env:
+        PGP_PASSWORD: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
         SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
         SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
