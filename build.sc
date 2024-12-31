@@ -14,7 +14,7 @@ object publish extends Cross[Publish](scala213, scala212)
 object Deps {
 
   object Version {
-    def coursier      = "2.1.20"
+    def coursier      = "2.1.23"
     def jsoniterScala = "2.31.3"
   }
 
