@@ -26,7 +26,7 @@ object Deps {
   def jsoniterMacros =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Version.jsoniterScala}"
   def sttp  = ivy"com.softwaremill.sttp.client3::core:3.10.2"
-  def utest = ivy"com.lihaoyi::utest::0.8.4"
+  def utest = ivy"com.lihaoyi::utest::0.8.5"
 }
 
 trait Publish extends CrossScalaModule with Published {
