@@ -103,9 +103,8 @@ object Dir {
       }
     }
 
-    Files.isDirectory(dir) && {
-      validate(dir).getOrElse(false)
-    }
+    Files.isDirectory(dir) &&
+    validate(dir).getOrElse(false)
   }
 
   def read(dir: Path, logger: => DirLogger): FileSet = {
