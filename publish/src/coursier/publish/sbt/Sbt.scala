@@ -114,11 +114,10 @@ object Sbt {
   def isSbtProject(dir: Path): Boolean =
     Files.isDirectory(dir) && {
       val buildProps = dir.resolve("project/build.properties")
-      Files.isRegularFile(buildProps) && {
-        Try(new String(Files.readAllBytes(buildProps), StandardCharsets.UTF_8))
-          .toOption
-          .exists(_.linesIterator.exists(_.startsWith("sbt.version=")))
-      }
+      Files.isRegularFile(buildProps) &&
+      Try(new String(Files.readAllBytes(buildProps), StandardCharsets.UTF_8))
+        .toOption
+        .exists(_.linesIterator.exists(_.startsWith("sbt.version=")))
     }
 
 }
