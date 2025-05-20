@@ -15,7 +15,7 @@ object Deps {
 
   object Version {
     def coursier      = "2.1.24"
-    def jsoniterScala = "2.35.3"
+    def jsoniterScala = "2.36.1"
   }
 
   def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.13.0"
