@@ -26,7 +26,7 @@ object PublishTasks {
     val groups = Group.split(fs)
 
     for {
-      groups0 <- Group.addOrUpdateMavenMetadata(groups, now, pool)
+      groups0  <- Group.addOrUpdateMavenMetadata(groups, now, pool)
       fromRepo <- Group.downloadMavenMetadata(
         groups.collect { case m: Group.Module => (m.organization, m.name) },
         download,

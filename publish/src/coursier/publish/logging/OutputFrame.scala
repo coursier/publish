@@ -197,7 +197,7 @@ object OutputFrame {
       new Iterator[String] {
         var current = first
         def hasNext = current ne null
-        def next() = {
+        def next()  = {
           val v = current.value
           current = current.next
           v

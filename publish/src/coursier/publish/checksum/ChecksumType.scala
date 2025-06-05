@@ -16,7 +16,7 @@ sealed abstract class ChecksumType(
   val extension: String,
   val size: Int
 ) extends Product with Serializable {
-  private val firstInvalidValue = BigInteger.valueOf(16L).pow(size)
+  private val firstInvalidValue              = BigInteger.valueOf(16L).pow(size)
   def validValue(value: BigInteger): Boolean =
     value.compareTo(BigInteger.ZERO) >= 0 &&
     value.compareTo(firstInvalidValue) < 0

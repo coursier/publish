@@ -255,7 +255,7 @@ object SonatypeApi {
 
   def activityErrored(activity: RawJson): Either[List[String], Unit] =
     try {
-      val a = readFromArray(activity.value)(Activity.codec)
+      val a      = readFromArray(activity.value)(Activity.codec)
       val errors = a.events
         .filter(_.severity >= 1)
         .map(e => e.propertiesMap.getOrElse("failureMessage", e.name))

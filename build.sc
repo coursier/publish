@@ -21,7 +21,7 @@ object Deps {
   def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.13.0"
   def coursierCache    = ivy"io.get-coursier::coursier-cache:${Version.coursier}"
   def coursierCore     = ivy"io.get-coursier::coursier-core:${Version.coursier}"
-  def jsoniterCore =
+  def jsoniterCore     =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Version.jsoniterScala}"
   def jsoniterMacros =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Version.jsoniterScala}"

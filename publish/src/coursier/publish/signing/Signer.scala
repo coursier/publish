@@ -77,7 +77,7 @@ trait Signer {
         case (previous, (path, content)) =>
           previous match {
             case l @ Left(_) => l
-            case Right(l) =>
+            case Right(l)    =>
               def doSign() = sign(content) match {
                 case Left(e) =>
                   Left((path, content, e))

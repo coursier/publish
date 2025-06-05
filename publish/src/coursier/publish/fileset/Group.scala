@@ -183,7 +183,7 @@ object Group {
     ): Module = {
 
       val base = map.get((organization, name)) match {
-        case None => this
+        case None     => this
         case Some(to) =>
           updateMetadata(Some(to._1), Some(to._2), None, None, None, None, None, None, now)
       }
@@ -224,7 +224,7 @@ object Group {
 
     def dependenciesOpt: Seq[coursier.core.Module] =
       pomOpt match {
-        case None => Nil
+        case None               => Nil
         case Some((_, content)) =>
           val b = content.content()
           val s = new String(b, StandardCharsets.UTF_8)
@@ -338,7 +338,7 @@ object Group {
           val b = content.content()
 
           val updatedMetadataBytes = {
-            val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+            val elem       = XML.loadString(new String(b, StandardCharsets.UTF_8))
             val newContent = coursier.publish.MavenMetadata.update(
               elem,
               Some(organization),
@@ -433,8 +433,8 @@ object Group {
             artifacts(buildNumber)
           )
         case Some(c) =>
-          val b    = c.content()
-          val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+          val b                    = c.content()
+          val elem                 = XML.loadString(new String(b, StandardCharsets.UTF_8))
           val latestSnapshotParams =
             publish.MavenMetadata.currentSnapshotVersioning(elem).getOrElse {
               ???
@@ -471,7 +471,7 @@ object Group {
       // checksum before underlying file
       // signatures before underlying file
 
-      val pomFileName0 = pomFileName
+      val pomFileName0      = pomFileName
       val (pomFiles, other) = files.elements.partition {
         case (n, _) =>
           n == pomFileName0 || n.startsWith(pomFileName0 + ".")
@@ -528,8 +528,8 @@ object Group {
         case None =>
           this
         case Some(c) =>
-          val b    = c.content()
-          val elem = XML.loadString(new String(b, StandardCharsets.UTF_8))
+          val b       = c.content()
+          val elem    = XML.loadString(new String(b, StandardCharsets.UTF_8))
           val updated = coursier.publish.MavenMetadata.update(
             elem,
             org,
@@ -598,8 +598,8 @@ object Group {
 
         dir.elements.reverse match {
           case Seq(ver, strName, reverseOrg @ _*) if reverseOrg.nonEmpty && !canBeMavenMetadata =>
-            val org  = Organization(reverseOrg.reverse.mkString("."))
-            val name = ModuleName(strName)
+            val org                   = Organization(reverseOrg.reverse.mkString("."))
+            val name                  = ModuleName(strName)
             val snapshotVersioningOpt =
               if (ver.endsWith("SNAPSHOT"))
                 Some(elements.map(_._1.elements.last).filter(_.endsWith(".pom")))
@@ -713,8 +713,8 @@ object Group {
 
     val a = modules.toSeq.map {
       case (k @ (org, name), m) =>
-        val versions = m.map(_.version)
-        val latest   = versions.map(Version(_)).max.repr
+        val versions   = m.map(_.version)
+        val latest     = versions.map(Version(_)).max.repr
         val releaseOpt =
           Some(versions.filter(publish.MavenMetadata.isReleaseVersion).map(Version(_)))
             .filter(_.nonEmpty)
@@ -730,7 +730,7 @@ object Group {
               versions,
               now
             )
-            val b = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
+            val b       = publish.MavenMetadata.print(elem).getBytes(StandardCharsets.UTF_8)
             val content = DirContent(Seq(
               "maven-metadata.xml" -> Content.InMemory(now, b)
             ))
@@ -829,8 +829,8 @@ object Group {
         // dontKnow should be empty anyway…
 
         val merged = withContent match {
-          case Seq()  => sys.error("can't possibly happen")
-          case Seq(m) => Task.point(m)
+          case Seq()               => sys.error("can't possibly happen")
+          case Seq(m)              => Task.point(m)
           case Seq(m, others @ _*) =>
             Task.schedule(pool) {
               val b        = m.xmlOpt.get.content()

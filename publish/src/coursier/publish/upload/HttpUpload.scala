@@ -27,7 +27,7 @@ final case class HttpUpload(
 
     val bodyInputStream: InputStream =
       new InputStream {
-        private var pos = 0
+        private var pos                    = 0
         private def addToPos(n: Int): Unit = {
           pos += n
           logger.progress(url, loggingIdOpt, pos, content.length)
