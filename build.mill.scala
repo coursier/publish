@@ -1,4 +1,4 @@
-import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.0`
+import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.1`
 import de.tobiasroeser.mill.vcs.version._
 
 import mill._
@@ -30,41 +30,43 @@ object Deps {
 }
 
 trait Publish extends CrossScalaModule with Published {
-  def ivyDeps = super.ivyDeps() ++ Seq(
+  def ivyDeps: Target[Agg[Dep]] = super.ivyDeps() ++ Seq(
     Deps.coursierCache,
     Deps.coursierCore,
     Deps.collectionCompat,
     Deps.jsoniterCore,
     Deps.sttp
   )
-  def compileIvyDeps = super.compileIvyDeps() ++ Seq(
+  def compileIvyDeps: Target[Agg[Dep]] = super.compileIvyDeps() ++ Seq(
     Deps.jsoniterMacros
   )
-  def javacOptions = super.javacOptions() ++ Seq(
+  def javacOptions: Target[Seq[String]] = super.javacOptions() ++ Seq(
     "--release",
     "8"
   )
   object test extends ScalaTests {
-    def ivyDeps = super.ivyDeps() ++ Seq(
+    def ivyDeps: Target[Agg[Dep]] = super.ivyDeps() ++ Seq(
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
   }
 }
 
-def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]) =
-  T.command {
+def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]): Command[Unit] =
+  Task.Command {
     val timeout     = 10.minutes
     val credentials = sys.env("SONATYPE_USERNAME") + ":" + sys.env("SONATYPE_PASSWORD")
     val pgpPassword = sys.env("PGP_PASSWORD")
-    val data        = T.sequence(tasks.value)()
+    val data        = Task.sequence(tasks.value)()
 
     doPublishSonatype(
       credentials = credentials,
       pgpPassword = pgpPassword,
       data = data,
       timeout = timeout,
-      log = T.ctx().log
+      workspace = Task.workspace,
+      env = Task.env,
+      log = Task.ctx().log
     )
   }
 
@@ -73,6 +75,8 @@ private def doPublishSonatype(
   pgpPassword: String,
   data: Seq[PublishModule.PublishData],
   timeout: Duration,
+  workspace: os.Path,
+  env: Map[String, String],
   log: mill.api.Logger
 ): Unit = {
 
@@ -109,6 +113,8 @@ private def doPublishSonatype(
     readTimeout = timeout.toMillis.toInt,
     connectTimeout = timeout.toMillis.toInt,
     log = log,
+    workspace = workspace,
+    env = env,
     awaitTimeout = timeout.toMillis.toInt,
     stagingRelease = isRelease
   )
@@ -118,7 +124,7 @@ private def doPublishSonatype(
 
 trait Published extends PublishModule {
   import mill.scalalib.publish._
-  def pomSettings = PomSettings(
+  def pomSettings: Target[PomSettings] = PomSettings(
     description = artifactName(),
     organization = "io.get-coursier.publish",
     url = s"https://github.com/coursier/publish",
@@ -128,8 +134,7 @@ trait Published extends PublishModule {
       Developer("alexarchambault", "Alex Archambault", "https://github.com/alexarchambault")
     )
   )
-  def publishVersion =
-    finalPublishVersion()
+  def publishVersion: Target[String] = finalPublishVersion()
 }
 
 private def computePublishVersion(state: VcsState, simple: Boolean): String =
@@ -176,15 +181,15 @@ private def computePublishVersion(state: VcsState, simple: Boolean): String =
     else fromTag
   }
 
-def finalPublishVersion = {
+def finalPublishVersion: Target[String] = {
   val isCI = System.getenv("CI") != null
   if (isCI)
-    T.persistent {
+    Task(persistent = true) {
       val state = VcsVersion.vcsState()
       computePublishVersion(state, simple = false)
     }
   else
-    T {
+    Task {
       val state = VcsVersion.vcsState()
       computePublishVersion(state, simple = true)
     }
