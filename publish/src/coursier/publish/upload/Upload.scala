@@ -68,7 +68,7 @@ trait Upload {
         .elements
         .map {
           case (path, content) =>
-            val url = s"$baseUrl0/${path.elements.mkString("/")}"
+            val url   = s"$baseUrl0/${path.elements.mkString("/")}"
             def run() = {
               val b = content.content()
               upload(url, repository.authentication, b, logger, Some(id))

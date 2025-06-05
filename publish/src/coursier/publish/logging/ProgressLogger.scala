@@ -53,7 +53,7 @@ final class ProgressLogger[T](
         for ((_, s) <- states.asScala.toVector.sortBy(_._2.totalOpt.sum)) {
           val m       = s.processed.asScala.iterator.toMap
           val ongoing = m.count(_._2.isLeft)
-          val extra =
+          val extra   =
             if (ongoing > 0) {
               val total = m.iterator.flatMap(_._2.left.toOption.iterator.map(_._2)).sum
               if (total > 0L) {
@@ -69,7 +69,7 @@ final class ProgressLogger[T](
               ""
           val doneCount = m.count(_._2.isRight)
           val done      = s.done.get()
-          val em =
+          val em        =
             if (done)
               doneEmoji.fold("")(_ + " ")
             else
@@ -91,7 +91,7 @@ final class ProgressLogger[T](
 
   private val onChangeUpdate     = update()
   private val onChangeUpdateLock = new Object
-  private def onChange(): Unit = {
+  private def onChange(): Unit   = {
     if (updateOnChange)
       onChangeUpdateLock.synchronized {
         onChangeUpdate.run()

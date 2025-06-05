@@ -24,7 +24,7 @@ final case class DirContent(elements: Seq[(String, Content)]) {
   /** Removes anything looking like a checksum or signature related to `path` */
   def removeAll(name: String): DirContent = {
 
-    val prefix = name + "."
+    val prefix         = name + "."
     val (remove, keep) = elements.partition {
       case (n, _) =>
         n == name || n.startsWith(prefix)

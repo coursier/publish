@@ -37,7 +37,7 @@ object Dir {
         // ???
         LazyList.empty
 
-    val dir0 = dir.normalize().toAbsolutePath
+    val dir0  = dir.normalize().toAbsolutePath
     val elems = files(dir0).toVector.map { f =>
       val p       = FsPath(dir0.relativize(f).iterator().asScala.map(_.toString).toVector)
       val content = Content.File(f)
@@ -82,13 +82,13 @@ object Dir {
 
       checkFiles match {
         case Some(false) => checkFiles
-        case _ =>
+        case _           =>
           val checkDirs =
             dirs.foldLeft(Option.empty[Boolean]) {
               (acc, dir) =>
                 acc match {
                   case Some(false) => acc
-                  case _ =>
+                  case _           =>
                     validate(dir) match {
                       case r @ Some(_) => r
                       case None        => acc

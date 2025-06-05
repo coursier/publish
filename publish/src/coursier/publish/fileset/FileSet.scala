@@ -26,7 +26,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
   /** Removes anything looking like a checksum or signature related to `path` */
   def removeAll(path: Path): FileSet = {
 
-    val prefix = path.repr + "."
+    val prefix         = path.repr + "."
     val (remove, keep) = elements.partition {
       case (p, _) =>
         p == path || p.repr.startsWith(prefix)

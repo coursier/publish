@@ -8,7 +8,7 @@ import utest._
 object SonatypeTests extends TestSuite {
   val tests = Tests {
     test("Retry sonatype repository actions") {
-      var count = 0
+      var count       = 0
       val mockBackend = SttpBackendStub.synchronous
         .whenRequestMatches { _ => count += 1; count < 6 }
         .thenRespondServerError()

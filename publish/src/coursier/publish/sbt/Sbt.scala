@@ -80,7 +80,7 @@ final class Sbt(
       )
     else if (verbosity >= 0) {
       val name = directory.getName
-      val msg =
+      val msg  =
         if (name == ".")
           s"Publishing sbt project to temporary directory"
         else
