@@ -23,18 +23,15 @@ jobs:
       run: ./mill __.compile && ./mill __.test
 
   format:
-    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        submodules: true
-    - uses: coursier/cache-action@v6
-    - uses: coursier/setup-action@v1
-      with:
-        jvm: 8
-        apps: scalafmt:3.1.1
-    - run: scalafmt --check
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+      - uses: VirtusLab/scala-cli-setup@v1
+      - run: scala-cli fmt . --check
 
   publish:
     if: github.event_name == 'push'
