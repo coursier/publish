@@ -1,7 +1,6 @@
 package coursier.publish.sonatype
 
 import com.github.plokhotnyuk.jsoniter_scala.core._
-import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
 import coursier.core.Authentication
 import coursier.util.Task
 import sttp.client3._
@@ -22,7 +21,7 @@ private[sonatype] final case class HttpClientUtil(
   private def request(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false) = {
 
     val uri = Uri.parse(url) match {
-      case Left(err)   => ???
+      case Left(_)     => ???
       case Right(uri0) => uri0
     }
     val authHeaders = authentication
@@ -47,7 +46,7 @@ private[sonatype] final case class HttpClientUtil(
       .response(asByteArrayAlways)
 
     post match {
-      case Some(body) =>
+      case Some(_) =>
         req
           .body(post.getOrElse(Array.emptyByteArray))
           .post(uri)

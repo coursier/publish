@@ -1,10 +1,10 @@
 package coursier.publish.upload.logger
 
-import java.io.{OutputStream, OutputStreamWriter, Writer}
-
 import coursier.publish.fileset.FileSet
 import coursier.publish.logging.ProgressLogger
 import coursier.publish.upload.Upload
+
+import java.io.{OutputStream, OutputStreamWriter, Writer}
 
 // FIXME Would have been better if dummy was passed by the Upload instance when calling the methods of UploadLogger
 final class InteractiveUploadLogger(out: Writer, dummy: Boolean, isLocal: Boolean)

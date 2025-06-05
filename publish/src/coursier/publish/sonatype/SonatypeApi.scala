@@ -1,8 +1,5 @@
 package coursier.publish.sonatype
 
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.ScheduledExecutorService
-
 import com.github.plokhotnyuk.jsoniter_scala.core._
 import com.github.plokhotnyuk.jsoniter_scala.macros._
 import coursier.core.Authentication
@@ -10,6 +7,9 @@ import coursier.publish.sonatype.logger.SonatypeLogger
 import coursier.publish.util.EmaRetryParams
 import coursier.util.Task
 import sttp.client3._
+
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.ScheduledExecutorService
 
 import scala.annotation.tailrec
 import scala.concurrent.duration.{Duration, DurationInt}

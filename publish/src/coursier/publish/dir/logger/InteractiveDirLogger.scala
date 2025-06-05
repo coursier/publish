@@ -1,9 +1,9 @@
 package coursier.publish.dir.logger
 
+import coursier.publish.logging.ProgressLogger
+
 import java.io.{OutputStream, OutputStreamWriter}
 import java.nio.file.Path
-
-import coursier.publish.logging.ProgressLogger
 
 final class InteractiveDirLogger(out: OutputStreamWriter, dirName: String, verbosity: Int)
     extends DirLogger {

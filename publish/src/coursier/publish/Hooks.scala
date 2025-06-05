@@ -1,13 +1,13 @@
 package coursier.publish
 
-import java.io.PrintStream
-import java.util.concurrent.ScheduledExecutorService
-
 import coursier.maven.MavenRepository
 import coursier.publish.fileset.FileSet
 import coursier.publish.sonatype.SonatypeApi
 import coursier.publish.sonatype.logger.{BatchSonatypeLogger, InteractiveSonatypeLogger}
 import coursier.util.Task
+
+import java.io.PrintStream
+import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.duration.DurationInt
 

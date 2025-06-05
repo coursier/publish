@@ -1,8 +1,8 @@
 package coursier.publish.signing.logger
 
-import java.io.PrintStream
-
 import coursier.publish.fileset.Path
+
+import java.io.PrintStream
 
 final class BatchSignerLogger(out: PrintStream, verbosity: Int) extends SignerLogger {
 

@@ -1,11 +1,11 @@
 package coursier.publish.dir
 
-import java.nio.file.{Files, Path}
-
-import coursier.publish.fileset.{FileSet, Path => FsPath}
 import coursier.publish.Content
 import coursier.publish.dir.logger.DirLogger
+import coursier.publish.fileset.{FileSet, Path => FsPath}
 import coursier.util.Task
+
+import java.nio.file.{Files, Path}
 
 import scala.collection.compat.immutable.LazyList
 import scala.jdk.CollectionConverters._

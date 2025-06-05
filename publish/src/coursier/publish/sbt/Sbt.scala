@@ -1,13 +1,13 @@
 package coursier.publish.sbt
 
+import coursier.publish.logging.OutputFrame
+
 import java.io.{File, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
-import coursier.publish.logging.OutputFrame
-
-import scala.jdk.CollectionConverters._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.util.{Failure, Success, Try}
 
 final class Sbt(
@@ -18,9 +18,6 @@ final class Sbt(
   verbosity: Int,
   interactive: Boolean = true
 ) {
-
-  private implicit val ec0 = ec
-
   private val keepSbtOutput = (!interactive && verbosity >= 0) || verbosity >= 2
 
   def run(sbtCommands: String): Try[Int] = {

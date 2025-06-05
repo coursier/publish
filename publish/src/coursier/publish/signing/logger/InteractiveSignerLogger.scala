@@ -1,9 +1,9 @@
 package coursier.publish.signing.logger
 
-import java.io.{OutputStream, OutputStreamWriter, Writer}
-
 import coursier.publish.fileset.{FileSet, Path}
 import coursier.publish.logging.ProgressLogger
+
+import java.io.{OutputStream, OutputStreamWriter, Writer}
 
 final class InteractiveSignerLogger(out: Writer, verbosity: Int) extends SignerLogger {
 

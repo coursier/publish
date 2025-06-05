@@ -1,10 +1,10 @@
 package coursier.publish
 
-import java.time.{Instant, LocalDateTime, ZoneOffset}
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-
 import coursier.core.{ModuleName, Organization}
+
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.util.Locale
 
 import scala.util.Try
 import scala.xml.{Elem, Node}

@@ -1,11 +1,11 @@
 package coursier.publish.signing
 
-import java.time.Instant
-
 import coursier.publish.Content
 import coursier.publish.fileset.{FileSet, Path}
 import coursier.publish.signing.logger.SignerLogger
 import coursier.util.Task
+
+import java.time.Instant
 
 object NopSigner extends Signer {
   def sign(content: Content): Either[String, String] =
