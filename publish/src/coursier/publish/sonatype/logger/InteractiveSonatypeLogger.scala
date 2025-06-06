@@ -1,8 +1,8 @@
 package coursier.publish.sonatype.logger
 
-import java.io.{OutputStream, OutputStreamWriter}
-
 import coursier.cache.internal.Terminal.Ansi
+
+import java.io.{OutputStream, OutputStreamWriter}
 
 final class InteractiveSonatypeLogger(out: OutputStreamWriter, verbosity: Int)
     extends SonatypeLogger {

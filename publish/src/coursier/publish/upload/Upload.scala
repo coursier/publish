@@ -1,11 +1,12 @@
 package coursier.publish.upload
 
-import coursier.publish.Content
-import coursier.publish.fileset.{FileSet, Path}
 import coursier.core.Authentication
 import coursier.maven.MavenRepository
+import coursier.publish.Content
+import coursier.publish.fileset.{FileSet, Path}
 import coursier.publish.upload.logger.UploadLogger
 import coursier.util.Task
+
 import java.util.concurrent.ExecutorService
 
 /** Uploads / sends content to a repository.

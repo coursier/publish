@@ -1,12 +1,12 @@
 package coursier.publish.upload
 
-import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
-import java.net.{HttpURLConnection, URL}
-import java.nio.charset.StandardCharsets
-
 import coursier.cache.CacheUrl
 import coursier.core.Authentication
 import coursier.publish.upload.logger.UploadLogger
+
+import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
+import java.net.{HttpURLConnection, URL}
+import java.nio.charset.StandardCharsets
 
 import scala.jdk.CollectionConverters._
 import scala.util.Try

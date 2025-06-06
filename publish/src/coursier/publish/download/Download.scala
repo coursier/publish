@@ -1,10 +1,10 @@
 package coursier.publish.download
 
-import java.time.Instant
-
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
 import coursier.util.Task
+
+import java.time.Instant
 
 trait Download {
   def downloadIfExists(

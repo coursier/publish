@@ -1,9 +1,9 @@
 package coursier.publish.upload.logger
 
-import java.io.PrintStream
-
 import coursier.publish.fileset.FileSet
 import coursier.publish.upload.Upload
+
+import java.io.PrintStream
 
 final class BatchUploadLogger(out: PrintStream, dummy: Boolean, isLocal: Boolean)
     extends UploadLogger {

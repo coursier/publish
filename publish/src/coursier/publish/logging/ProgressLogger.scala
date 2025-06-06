@@ -1,12 +1,12 @@
 package coursier.publish.logging
 
+import coursier.cache.internal.Terminal.Ansi
+import coursier.cache.internal.ThreadUtil
+
 import java.io.Writer
 import java.lang.{Boolean => JBoolean}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{ConcurrentHashMap, Executors, ScheduledFuture, TimeUnit}
-
-import coursier.cache.internal.Terminal.Ansi
-import coursier.cache.internal.ThreadUtil
 
 import scala.jdk.CollectionConverters._
 

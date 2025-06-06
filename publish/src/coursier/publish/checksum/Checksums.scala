@@ -1,14 +1,15 @@
 package coursier.publish.checksum
 
-import java.nio.charset.StandardCharsets
-import java.time.Instant
-
 import coursier.publish.Content
 import coursier.publish.checksum.logger.ChecksumLogger
 import coursier.publish.fileset.FileSet
 import coursier.util.Task
-import scala.util.control.NonFatal
+
+import java.nio.charset.StandardCharsets
+import java.time.Instant
 import java.util.concurrent.ExecutorService
+
+import scala.util.control.NonFatal
 
 object Checksums {
 

@@ -1,10 +1,10 @@
 package coursier.publish.checksum.logger
 
-import java.io.{OutputStream, OutputStreamWriter, Writer}
-
 import coursier.publish.checksum.ChecksumType
 import coursier.publish.fileset.FileSet
 import coursier.publish.logging.ProgressLogger
+
+import java.io.{OutputStream, OutputStreamWriter, Writer}
 
 final class InteractiveChecksumLogger(out: Writer, verbosity: Int) extends ChecksumLogger {
 

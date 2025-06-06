@@ -1,10 +1,10 @@
 package coursier.publish.logging
 
-import java.io._
-import java.util.concurrent.{Executors, ScheduledFuture, TimeUnit}
-
 import coursier.cache.internal.Terminal.Ansi
 import coursier.cache.internal.{ConsoleDim, ThreadUtil}
+
+import java.io._
+import java.util.concurrent.{Executors, ScheduledFuture, TimeUnit}
 
 import scala.util.control.NonFatal
 

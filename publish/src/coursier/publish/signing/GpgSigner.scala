@@ -1,11 +1,11 @@
 package coursier.publish.signing
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Path}
-import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
-
 import coursier.publish.Content
 import coursier.util.Task
+
+import java.nio.charset.StandardCharsets
+import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
+import java.nio.file.{Files, Path}
 
 import scala.jdk.CollectionConverters._
 

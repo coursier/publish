@@ -1,14 +1,14 @@
 package coursier.publish.fileset
 
-import java.time.Instant
-
-import coursier.publish.Content
 import coursier.core.{ModuleName, Organization}
+import coursier.publish.Content
 import coursier.publish.Pom.{Developer, License}
 import coursier.util.Task
 
-import scala.collection.compat._
+import java.time.Instant
 import java.util.concurrent.ExecutorService
+
+import scala.collection.compat._
 
 final case class FileSet(elements: Seq[(Path, Content)]) {
   def ++(other: FileSet): FileSet = {

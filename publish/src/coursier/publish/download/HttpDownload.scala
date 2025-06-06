@@ -3,13 +3,13 @@ package coursier.publish.download
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
 import sttp.client3._
+import sttp.model.{Header, Uri}
 
-import java.time.Instant
-import sttp.model.Uri
-import sttp.model.Header
 import java.net.URLConnection
-import java.util.Date
 import java.text.DateFormat
+import java.time.Instant
+import java.util.Date
+
 import scala.util.control.NonFatal
 
 final case class HttpDownload(
@@ -22,7 +22,7 @@ final case class HttpDownload(
   ): Option[(Option[Instant], Array[Byte])] = {
 
     val uri = Uri.parse(url) match {
-      case Left(error) => ???
+      case Left(_)     => ???
       case Right(uri0) => uri0
     }
 

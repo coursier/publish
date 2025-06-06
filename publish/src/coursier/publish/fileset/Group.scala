@@ -1,20 +1,20 @@
 package coursier.publish.fileset
 
-import java.nio.charset.StandardCharsets
-import java.time.{Instant, ZoneOffset}
-
-import coursier.publish
-import coursier.publish.{Content, Pom}
-import coursier.publish.dir.DirContent
 import coursier.core.{ModuleName, Organization, Version}
 import coursier.maven.MavenRepository
+import coursier.publish
 import coursier.publish.Pom.{Developer, License}
+import coursier.publish.dir.DirContent
 import coursier.publish.download.Download
 import coursier.publish.download.logger.DownloadLogger
+import coursier.publish.{Content, Pom}
 import coursier.util.Task
 
-import scala.xml.{Elem, XML}
+import java.nio.charset.StandardCharsets
+import java.time.{Instant, ZoneOffset}
 import java.util.concurrent.ExecutorService
+
+import scala.xml.{Elem, XML}
 
 /** A subset of a [[FileSet]], with particular semantic.
   */
@@ -401,7 +401,7 @@ object Group {
             Nil
           case ("maven-metadata.xml", _) =>
             Nil
-          case (other, _) =>
+          case (_, _) =>
             // unrecognized file…
             ???
         }.flatten
@@ -706,7 +706,7 @@ object Group {
       .groupBy(m => (m.organization, m.name))
       .mapValues {
         case Seq(md) => md
-        case l       => ???
+        case _       => ???
       }
       .iterator
       .toMap

@@ -21,7 +21,7 @@ final case class HttpUpload(
     loggingIdOpt: Option[Object]
   ): Option[Upload.Error] = {
 
-    val maybeUri = Uri.parse(url).left.map { err =>
+    val maybeUri = Uri.parse(url).left.map { _ =>
       ???
     }
 
