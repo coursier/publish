@@ -84,7 +84,7 @@ final case class HttpUpload(
     val e = maybeUri.flatMap { uri =>
       val req = basicRequest
         .body(bodyInputStream)
-        .headers(expect100Headers ++ authHeaders: _*)
+        .headers(expect100Headers ++ authHeaders*)
         .put(uri)
       logger.uploading(url, loggingIdOpt, Some(content.length))
       val resp = req.send(backend)

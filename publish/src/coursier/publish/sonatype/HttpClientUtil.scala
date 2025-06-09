@@ -41,7 +41,7 @@ private[sonatype] final case class HttpClientUtil(
         "Accept",
         "application/json,application/vnd.siesta-error-v1+json,application/vnd.siesta-validation-errors-v1+json"
       )
-      .headers(authHeaders ++ contentTypeHeaders: _*)
+      .headers(authHeaders ++ contentTypeHeaders*)
       .response(asByteArrayAlways)
 
     post match {

@@ -3,7 +3,7 @@ package coursier.publish.sonatype
 import coursier.publish.util.EmaRetryParams
 import sttp.client3.testing.SttpBackendStub
 
-import utest._
+import utest.*
 
 object SonatypeTests extends TestSuite {
   val tests = Tests {

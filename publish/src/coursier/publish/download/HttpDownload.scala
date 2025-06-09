@@ -32,7 +32,7 @@ final case class HttpDownload(
       }
 
     val req = basicRequest
-      .headers(authHeaders: _*)
+      .headers(authHeaders*)
       .response(asByteArrayAlways)
       .get(uri)
     logger.downloadingIfExists(url)

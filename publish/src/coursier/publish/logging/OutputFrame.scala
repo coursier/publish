@@ -131,7 +131,7 @@ final class OutputFrame(
     }
 
   private val pool = Executors.newScheduledThreadPool(1, ThreadUtil.daemonThreadFactory())
-  private var updateFutureOpt = Option.empty[ScheduledFuture[_]]
+  private var updateFutureOpt = Option.empty[ScheduledFuture[?]]
 
   private val period = 1000L / 50L
 

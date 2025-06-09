@@ -22,7 +22,7 @@ final class ProgressLogger[T](
   doneEmoji: Option[String] = Some(Console.GREEN + "✔" + Console.RESET)
 ) {
 
-  import ProgressLogger._
+  import ProgressLogger.*
 
   private val states  = new ConcurrentHashMap[T, State]
   private var printed = 0
@@ -133,7 +133,7 @@ final class ProgressLogger[T](
 
   // FIXME Unused if updateOnChange is true
   private val pool = Executors.newScheduledThreadPool(1, ThreadUtil.daemonThreadFactory())
-  private var updateFutureOpt = Option.empty[ScheduledFuture[_]]
+  private var updateFutureOpt = Option.empty[ScheduledFuture[?]]
 
   private val period = 1000L / 50L
 

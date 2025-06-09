@@ -28,7 +28,7 @@ final case class SonatypeApi(
   // vaguely inspired by https://github.com/lihaoyi/mill/blob/7b4ced648ecd9b79b3a16d67552f0bb69f4dd543/scalalib/src/mill/scalalib/publish/SonatypeHttpApi.scala
   // and https://github.com/xerial/sbt-sonatype/blob/583db138df2b0e7bbe58717103f2c9874fca2a74/src/main/scala/xerial/sbt/Sonatype.scala
 
-  import SonatypeApi._
+  import SonatypeApi.*
 
   private def postBody(content: Array[Byte]): Array[Byte] =
     """{"data":""".getBytes(StandardCharsets.UTF_8) ++ content ++ "}".getBytes(
@@ -42,7 +42,7 @@ final case class SonatypeApi(
     isJson: Boolean = false
   ): T =
     if (nested)
-      clientUtil.get(url, post, nested, isJson)(Response.codec[T]).data
+      clientUtil.get(url, post, nested, isJson)(using Response.codec[T]).data
     else
       clientUtil.get[T](url, post, nested, isJson)
 
@@ -67,7 +67,7 @@ final case class SonatypeApi(
     def task(attempt: Int) = Task.delay {
       logger.listingProfiles(attempt, retryOnTimeout)
       val res =
-        try get(s"$base/staging/profiles")(Profiles.Profile.listCodec)
+        try get(s"$base/staging/profiles")(using Profiles.Profile.listCodec)
             .map(_.profile)
         catch {
           case NonFatal(e) =>
@@ -82,7 +82,7 @@ final case class SonatypeApi(
   }
 
   def rawListProfiles(): RawJson =
-    get(s"$base/staging/profiles")(RawJson.codec)
+    get(s"$base/staging/profiles")(using RawJson.codec)
 
   def decodeListProfilesResponse(json: RawJson): Either[Exception, Seq[SonatypeApi.Profile]] =
     try {
@@ -96,11 +96,11 @@ final case class SonatypeApi(
 
   def listProfileRepositories(profileIdOpt: Option[String]): Seq[SonatypeApi.Repository] =
     get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(
-      RepositoryResponse.listCodec
+      using RepositoryResponse.listCodec
     ).map(_.repository)
 
   def rawListProfileRepositories(profileIdOpt: Option[String]): RawJson =
-    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(RawJson.codec)
+    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(using RawJson.codec)
 
   def decodeListProfileRepositoriesResponse(json: RawJson)
     : Either[Exception, Seq[SonatypeApi.Repository]] =
@@ -115,14 +115,14 @@ final case class SonatypeApi(
       s"${profile.uri}/start",
       post = Some(postBody(writeToArray(StartRequest(description)))),
       isJson = true
-    )(StartResponse.codec).stagedRepositoryId
+    )(using StartResponse.codec).stagedRepositoryId
 
   def rawCreateStagingRepository(profile: Profile, description: String): RawJson =
     get(
       s"${profile.uri}/start",
       post = Some(postBody(writeToArray(StartRequest(description)))),
       isJson = true
-    )(RawJson.codec)
+    )(using RawJson.codec)
 
   private def stagedRepoAction(
     action: String,
@@ -173,7 +173,7 @@ final case class SonatypeApi(
 
   def lastActivity(repositoryId: String, action: String): Option[RawJson] =
     get(s"$base/staging/repository/$repositoryId/activity", nested = false)(
-      SonatypeApi.jsonListCodec
+      using SonatypeApi.jsonListCodec
     )
       .filter { json =>
         val nameOpt = readFromArray(json.value)(SonatypeApi.MaybeHasName.codec).name

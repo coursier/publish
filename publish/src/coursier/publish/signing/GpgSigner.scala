@@ -75,7 +75,7 @@ final case class GpgSigner(
               dest.toAbsolutePath.toString,
               "--detach-sign",
               path.toAbsolutePath.toString
-            ): _*
+            )*
         )
         .inheritIO()
 
