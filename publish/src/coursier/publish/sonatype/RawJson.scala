@@ -1,7 +1,7 @@
 package coursier.publish.sonatype
 
 import java.nio.charset.StandardCharsets
-import java.{util => ju}
+import java.util as ju
 
 import scala.util.Try
 import scala.util.hashing.MurmurHash3

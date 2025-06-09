@@ -2,13 +2,12 @@ package coursier.publish.dir
 
 import coursier.publish.Content
 import coursier.publish.dir.logger.DirLogger
-import coursier.publish.fileset.{FileSet, Path => FsPath}
-import coursier.util.Task
+import coursier.publish.fileset.{FileSet, Path as FsPath}
 
 import java.nio.file.{Files, Path}
 
 import scala.collection.compat.immutable.LazyList
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.control.NonFatal
 
 object Dir {

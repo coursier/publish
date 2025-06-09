@@ -2,7 +2,6 @@ package coursier.publish.download
 
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
-import coursier.util.Task
 
 import java.nio.file.{Files, Path}
 import java.time.Instant

@@ -1,15 +1,14 @@
 package coursier.publish.sonatype
 
-import com.github.plokhotnyuk.jsoniter_scala.core._
+import com.github.plokhotnyuk.jsoniter_scala.core.*
 import coursier.core.Authentication
-import coursier.util.Task
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.{Header, Uri}
 
 import java.io.FileNotFoundException
 import java.nio.charset.StandardCharsets
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
 private[sonatype] final case class HttpClientUtil(

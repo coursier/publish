@@ -3,7 +3,7 @@ package coursier.publish.upload
 import coursier.cache.CacheUrl
 import coursier.core.Authentication
 import coursier.publish.upload.logger.UploadLogger
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.{Header, Uri}
 
 import java.io.InputStream

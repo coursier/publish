@@ -1,13 +1,12 @@
 package coursier.publish.signing
 
 import coursier.publish.Content
-import coursier.util.Task
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.attribute.{PosixFilePermission, PosixFilePermissions}
 import java.nio.file.{Files, Path}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 final case class GpgSigner(
   key: GpgSigner.Key,

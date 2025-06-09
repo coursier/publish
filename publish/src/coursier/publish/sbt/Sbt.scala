@@ -7,7 +7,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
 
 final class Sbt(

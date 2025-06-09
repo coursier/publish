@@ -4,11 +4,10 @@ import coursier.cache.internal.Terminal.Ansi
 import coursier.cache.internal.ThreadUtil
 
 import java.io.Writer
-import java.lang.{Boolean => JBoolean}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{ConcurrentHashMap, Executors, ScheduledFuture, TimeUnit}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /** Displays the progress of some task on a single line.
   *

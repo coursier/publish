@@ -3,12 +3,10 @@ package coursier.publish.signing
 import coursier.publish.Content
 import coursier.publish.fileset.{FileSet, Path}
 import coursier.publish.signing.logger.SignerLogger
-import coursier.util.Task
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 
-import scala.util.Try
 import scala.util.control.NonFatal
 
 /** Signs artifacts.

@@ -2,11 +2,9 @@ package coursier.publish.download
 
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.{Header, Uri}
 
-import java.net.URLConnection
-import java.text.DateFormat
 import java.time.Instant
 import java.util.Date
 

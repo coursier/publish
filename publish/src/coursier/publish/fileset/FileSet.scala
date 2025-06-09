@@ -8,8 +8,6 @@ import coursier.util.Task
 import java.time.Instant
 import java.util.concurrent.ExecutorService
 
-import scala.collection.compat._
-
 final case class FileSet(elements: Seq[(Path, Content)]) {
   def ++(other: FileSet): FileSet = {
     // complexity possibly not too optimal… (removeAll iterates on all elements)

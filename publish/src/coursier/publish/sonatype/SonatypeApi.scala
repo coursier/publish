@@ -1,12 +1,12 @@
 package coursier.publish.sonatype
 
-import com.github.plokhotnyuk.jsoniter_scala.core._
-import com.github.plokhotnyuk.jsoniter_scala.macros._
+import com.github.plokhotnyuk.jsoniter_scala.core.*
+import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import coursier.core.Authentication
 import coursier.publish.sonatype.logger.SonatypeLogger
 import coursier.publish.util.EmaRetryParams
 import coursier.util.Task
-import sttp.client3._
+import sttp.client3.*
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ScheduledExecutorService

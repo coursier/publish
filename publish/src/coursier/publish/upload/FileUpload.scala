@@ -3,7 +3,6 @@ package coursier.publish.upload
 import coursier.core.Authentication
 import coursier.paths.Util
 import coursier.publish.upload.logger.UploadLogger
-import coursier.util.Task
 
 import java.net.URI
 import java.nio.file.{Files, Path, Paths}

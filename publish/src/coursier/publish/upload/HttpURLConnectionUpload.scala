@@ -8,7 +8,7 @@ import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
 import java.net.{HttpURLConnection, URL}
 import java.nio.charset.StandardCharsets
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Try
 import scala.util.control.NonFatal
 
