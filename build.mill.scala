@@ -27,20 +27,9 @@ object Deps {
 }
 
 trait Publish extends ScalaModule with Published with ScalafixModule {
-  def scalaVersion: Target[String] = Versions.scala3
-  // based on https://github.com/VirtusLab/scala-cli/blob/7dac44f9e04d028bfc150e8bc10614df8dba6581/project/settings/package.mill.scala#L789-L816
+  def scalaVersion: Target[String]                = Versions.scala3
   override def scalacOptions: Target[Seq[String]] = Task {
-    val parentOptions = {
-      val l   = super.scalacOptions()
-      val len = l.length
-      val idx = l.indexWhere(_.startsWith("-sourceroot"))
-      if (idx >= 0 && idx < len - 1) l.take(idx) ++ l.drop(idx + 2)
-      else l
-    }
-    val lintingOptions = Seq("-Wunused:all")
-    val sourceRoot     = os.Path(sys.env("MILL_WORKSPACE_ROOT"))
-    val semDbOptions   = Seq(s"-sourceroot", sourceRoot.toString)
-    parentOptions ++ lintingOptions ++ semDbOptions
+    super.scalacOptions() ++ Seq("-Wunused:all")
   }
 
   def ivyDeps: Target[Agg[Dep]] = super.ivyDeps() ++ Seq(
