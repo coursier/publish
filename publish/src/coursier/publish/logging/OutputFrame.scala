@@ -18,14 +18,13 @@ final class OutputFrame(
   preamble: Seq[String],
   postamble: Seq[String]
 ) {
-
   private[this] val lines              = new OutputFrame.Lines(bufferSize)
   private[this] val inCaseOfErrorLines = new OutputFrame.Lines(100) // don't hard-code size?
 
   private val readThread: Thread =
     new Thread("output-frame-read") {
       setDaemon(true)
-      override def run() =
+      override def run(): Unit =
         try {
           val br        = new BufferedReader(new InputStreamReader(is))
           var l: String = null
@@ -77,57 +76,50 @@ final class OutputFrame(
   }
 
   private def updateOutput(scrollUp: Boolean = true): Runnable =
-    new Runnable {
-      def run() = {
-        val width = ConsoleDim.width()
+    () => {
+      val width = ConsoleDim.width()
 
-        var count = 0
+      var count = 0
 
-        for (l <- preamble) {
-          val l0 =
-            if (preamble.length <= width) l
-            else l.substring(0, width)
-          out.clearLine(2)
-          out.write(l0 + System.lineSeparator())
-          count += 1
-        }
-
-        val it = lines.linesIterator()
-        var n  = 0
-        while (n < bufferSize && it.hasNext) {
-          val l = it.next()
-            // https://stackoverflow.com/a/25189932/3714539
-            .replaceAll("\u001B\\[[\\d;]*[^\\d;]", "")
-          val l0 =
-            if (l.length <= width) l
-            else l.substring(0, width)
-          out.clearLine(2)
-          out.write(l0 + System.lineSeparator())
-          n += 1
-        }
-
-        while (n < bufferSize + 1) {
-          out.clearLine(2)
-          out.write('\n')
-          n += 1
-        }
-
-        count += n
-
-        for (l <- postamble) {
-          val l0 =
-            if (preamble.length <= width) l
-            else l.substring(0, width)
-          out.clearLine(2)
-          out.write(l0 + System.lineSeparator())
-          count += 1
-        }
-
-        if (scrollUp)
-          out.up(count)
-
-        out.flush()
+      for (l <- preamble) {
+        val l0 = if preamble.length <= width then l else l.substring(0, width)
+        out.clearLine(2)
+        out.write(l0 + System.lineSeparator())
+        count += 1
       }
+
+      val it = lines.linesIterator()
+      var n  = 0
+      while (n < bufferSize && it.hasNext) {
+        val l = it.next()
+          // https://stackoverflow.com/a/25189932/3714539
+          .replaceAll("\u001B\\[[\\d;]*[^\\d;]", "")
+        val l0 = if l.length <= width then l else l.substring(0, width)
+        out.clearLine(2)
+        out.write(l0 + System.lineSeparator())
+        n += 1
+      }
+
+      while (n < bufferSize + 1) {
+        out.clearLine(2)
+        out.write('\n')
+        n += 1
+      }
+
+      count += n
+
+      for (l <- postamble) {
+        val l0 =
+          if preamble.length <= width then l
+          else l.substring(0, width)
+        out.clearLine(2)
+        out.write(l0 + System.lineSeparator())
+        count += 1
+      }
+
+      if scrollUp then out.up(count)
+
+      out.flush()
     }
 
   private val pool = Executors.newScheduledThreadPool(1, ThreadUtil.daemonThreadFactory())
@@ -151,10 +143,8 @@ final class OutputFrame(
     pool.awaitTermination(2L * period, TimeUnit.MILLISECONDS)
     errored match {
       case None =>
-        if (keepFrame)
-          updateOutput(scrollUp = false).run()
-        else
-          clear()
+        if keepFrame then updateOutput(scrollUp = false).run()
+        else clear()
       case Some(errStream) =>
         inCaseOfErrorLines.linesIterator().foreach(errStream.println)
     }
@@ -163,7 +153,6 @@ final class OutputFrame(
 }
 
 object OutputFrame {
-
   private final class Lines(bufferSize: Int) {
 
     @volatile private[this] var first: Line = _
@@ -172,10 +161,10 @@ object OutputFrame {
     // should not be called multiple times in parallel
     def append(value: String): Unit = {
       assert(value ne null)
-      val index = if (last eq null) 0L else last.index + 1L
+      val index = if last eq null then 0L else last.index + 1L
       val l     = new Line(value, index)
 
-      if (last eq null) {
+      if last eq null then {
         assert(first eq null)
         first = l
         last = l
@@ -195,9 +184,9 @@ object OutputFrame {
     // thread safe, and can be used while append gets called
     def linesIterator(): Iterator[String] =
       new Iterator[String] {
-        var current = first
-        def hasNext = current ne null
-        def next()  = {
+        var current: Line    = first
+        def hasNext: Boolean = current ne null
+        def next(): String   = {
           val v = current.value
           current = current.next
           v
@@ -207,7 +196,6 @@ object OutputFrame {
   }
 
   private final class Line(val value: String, val index: Long) {
-
     @volatile private[this] var next0: Line = _
 
     def setNext(next: Line): Unit = {
@@ -219,5 +207,4 @@ object OutputFrame {
     def next: Line =
       next0
   }
-
 }

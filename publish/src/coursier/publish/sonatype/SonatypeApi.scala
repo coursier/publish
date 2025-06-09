@@ -41,10 +41,8 @@ final case class SonatypeApi(
     nested: Boolean = true,
     isJson: Boolean = false
   ): T =
-    if (nested)
-      clientUtil.get(url, post, nested, isJson)(using Response.codec[T]).data
-    else
-      clientUtil.get[T](url, post, nested, isJson)
+    if nested then clientUtil.get(url, post, nested, isJson)(using Response.codec[T]).data
+    else clientUtil.get[T](url, post, nested, isJson)
 
   private val clientUtil = HttpClientUtil(backend, authentication, verbosity)
 
@@ -136,8 +134,8 @@ final case class SonatypeApi(
     def sendRequest(attempt: Int, waitDurationMs: Long): Unit = {
       val resp = clientUtil.createResponse(url, post = Some(body), isJson = true)
 
-      if (!resp.code.isSuccess) {
-        if (attempt >= stagingRepoRetryParams.attempts)
+      if !resp.code.isSuccess then {
+        if attempt >= stagingRepoRetryParams.attempts then
           throw new Exception(
             s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
           )
@@ -154,22 +152,19 @@ final case class SonatypeApi(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    stagedRepoAction("finish", profile, repositoryId, description)
+  ): Unit = stagedRepoAction("finish", profile, repositoryId, description)
 
   def sendPromoteStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    stagedRepoAction("promote", profile, repositoryId, description)
+  ): Unit = stagedRepoAction("promote", profile, repositoryId, description)
 
   def sendDropStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    stagedRepoAction("drop", profile, repositoryId, description)
+  ): Unit = stagedRepoAction("drop", profile, repositoryId, description)
 
   def lastActivity(repositoryId: String, action: String): Option[RawJson] =
     get(s"$base/staging/repository/$repositoryId/activity", nested = false)(
@@ -191,9 +186,7 @@ final case class SonatypeApi(
     backoffFactor: Double,
     es: ScheduledExecutorService
   ): Task[Unit] = {
-
     // TODO Stop early in case of error (which statuses exactly???)
-
     def task(attempt: Int, nextDelay: Duration, totalDelay: Duration): Task[Unit] =
       Task.delay(listProfileRepositories(Some(profileId))).flatMap { l =>
         l.find(_.id == repositoryId) match {
@@ -206,7 +199,7 @@ final case class SonatypeApi(
               case `status` =>
                 Task.point(())
               case other =>
-                if (attempt < maxAttempt) {
+                if attempt < maxAttempt then {
                   val errors = checkActivityOpt match {
                     case Some(checkActivity) =>
                       val lastActivity0 = lastActivity(repositoryId, checkActivity)
@@ -214,7 +207,7 @@ final case class SonatypeApi(
                     case None =>
                       Nil
                   }
-                  if (errors.isEmpty)
+                  if errors.isEmpty then
                     task(attempt + 1, nextDelay * backoffFactor, totalDelay + nextDelay)
                       .schedule(nextDelay, es)
                   else
@@ -239,7 +232,6 @@ final case class SonatypeApi(
 }
 
 object SonatypeApi {
-
   final case class Profile(
     id: String,
     name: String,
@@ -259,10 +251,7 @@ object SonatypeApi {
       val errors = a.events
         .filter(_.severity >= 1)
         .map(e => e.propertiesMap.getOrElse("failureMessage", e.name))
-      if (errors.isEmpty)
-        Right(())
-      else
-        Left(errors)
+      if errors.isEmpty then Right(()) else Left(errors)
     }
     catch {
       case e: JsonReaderException =>
@@ -320,7 +309,7 @@ object SonatypeApi {
       name: String,
       resourceURI: String
     ) {
-      def profile =
+      def profile: SonatypeApi.Profile =
         SonatypeApi.Profile(
           id,
           name,

@@ -21,17 +21,16 @@ final class Sbt(
   private val keepSbtOutput = (!interactive && verbosity >= 0) || verbosity >= 2
 
   def run(sbtCommands: String): Try[Int] = {
-
     val processCommands = Seq("sbt", "-J-Dsbt.log.noformat=true", sbtCommands) // UTF-8…
 
-    if (verbosity >= 2)
+    if verbosity >= 2 then
       Console.err.println(s"Running ${processCommands.map("'" + _ + "'").mkString(" ")}")
 
     Try {
       val b = new ProcessBuilder(processCommands.asJava)
       b.directory(directory)
       b.redirectInput(ProcessBuilder.Redirect.PIPE)
-      if (keepSbtOutput) {
+      if keepSbtOutput then {
         b.redirectOutput(ProcessBuilder.Redirect.INHERIT)
         b.redirectError(ProcessBuilder.Redirect.INHERIT)
       }
@@ -41,8 +40,7 @@ final class Sbt(
       val p = b.start()
       p.getOutputStream.close()
       val outputFrameOpt =
-        if (keepSbtOutput || !interactive)
-          None
+        if keepSbtOutput || !interactive then None
         else
           outputFrameSizeOpt.map { n =>
             System.out.flush()
@@ -61,7 +59,7 @@ final class Sbt(
       var retCode = 0
       try retCode = p.waitFor()
       finally {
-        val errStreamOpt = if (retCode == 0) None else Some(System.err)
+        val errStreamOpt = if retCode == 0 then None else Some(System.err)
         outputFrameOpt.foreach(_.stop(keepFrame = false, errored = errStreamOpt))
       }
 
@@ -70,18 +68,15 @@ final class Sbt(
   }
 
   def publishTo(dir: File, projectsOpt: Option[Seq[String]] = None): Future[Unit] = {
-
-    if (verbosity >= 1)
+    if verbosity >= 1 then
       Console.err.println(
         s"Publishing sbt project ${directory.getAbsolutePath} to temporary directory $dir"
       )
-    else if (verbosity >= 0) {
+    else if verbosity >= 0 then {
       val name = directory.getName
       val msg  =
-        if (name == ".")
-          s"Publishing sbt project to temporary directory"
-        else
-          s"Publishing ${directory.getName} to temporary directory"
+        if name == "." then s"Publishing sbt project to temporary directory"
+        else s"Publishing ${directory.getName} to temporary directory"
 
       Console.err.println(msg)
     }
@@ -107,7 +102,6 @@ final class Sbt(
 }
 
 object Sbt {
-
   def isSbtProject(dir: Path): Boolean =
     Files.isDirectory(dir) && {
       val buildProps = dir.resolve("project/build.properties")
@@ -116,5 +110,4 @@ object Sbt {
         .toOption
         .exists(_.linesIterator.exists(_.startsWith("sbt.version=")))
     }
-
 }

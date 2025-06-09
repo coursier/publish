@@ -6,7 +6,6 @@ import scala.collection.mutable
 import scala.xml.{Elem, Node, NodeSeq}
 
 object Pom {
-
   // TODO Check https://github.com/lihaoyi/mill/pull/144/files
   final case class License(name: String, url: String)
 
@@ -14,11 +13,11 @@ object Pom {
     def apache2: License =
       License("Apache-2.0", "https://spdx.org/licenses/Apache-2.0.html")
 
-    lazy val all = Seq(
+    lazy val all: Seq[License] = Seq(
       apache2
     )
 
-    lazy val map = all.map(l => l.name -> l).toMap
+    lazy val map: Map[String, License] = all.map(l => l.name -> l).toMap
   }
 
   final case class Scm(
@@ -112,7 +111,7 @@ object Pom {
           <developerConnection>{s.developerConnection}</developerConnection>
         </scm>
 
-    if (developers.nonEmpty)
+    if developers.nonEmpty then
       nodes +=
         <developers>
           {
@@ -127,7 +126,7 @@ object Pom {
         }
         </developers>
 
-    if (dependencies.nonEmpty)
+    if dependencies.nonEmpty then
       nodes +=
         <dependencies>
           {
@@ -139,14 +138,15 @@ object Pom {
                   <version>{ver}</version>
                   {confOpt.fold[NodeSeq](Nil)(c => <scope>{c}</scope>)}
                   {
-                if (exclusions.nonEmpty) <exclusions>{
-                  exclusions.data.toSet().foreach { case (org, module) =>
-                    <exclusion>
+                if exclusions.nonEmpty then
+                  <exclusions>{
+                    exclusions.data.toSet().foreach { case (org, module) =>
+                      <exclusion>
                       <groupId>{org.value}</groupId>
                       <artifactId>{module.value}</artifactId>
                     </exclusion>
-                  }
-                }</exclusions>
+                    }
+                  }</exclusions>
               }
                 </dependency>
           }
@@ -161,21 +161,19 @@ object Pom {
   }
 
   private def addOrUpdate(content: Elem, label: String)(update: Option[Node] => Node): Elem = {
-
     // assumes there's at most one child with this label…
 
     val found = content.child.exists(_.label == label)
 
     val updatedChildren =
-      if (found)
+      if found then
         content.child.map {
           case n if n.label == label =>
             update(Some(n))
           case n =>
             n
         }
-      else
-        content.child :+ update(None)
+      else content.child :+ update(None)
 
     content.copy(
       child = updatedChildren
@@ -183,7 +181,6 @@ object Pom {
   }
 
   def overrideOrganization(organization: Organization, content: Elem): Elem = {
-
     val content0 = addOrUpdate(content, "groupId") { _ =>
       <groupId>{organization.value}</groupId>
     }
@@ -211,7 +208,6 @@ object Pom {
     }
 
   def overrideHomepage(url: String, content: Elem): Elem = {
-
     val content0 = addOrUpdate(content, "url") { _ =>
       <url>{url}</url>
     }
@@ -312,7 +308,6 @@ object Pom {
     from: (Organization, ModuleName),
     to: (Organization, ModuleName)
   ): Elem = {
-
     def adjustGroupArtifactIds(n: Elem): Elem = {
 
       val orgOpt = n.child.collectFirst {
@@ -322,7 +317,7 @@ object Pom {
         case n if n.label == "artifactId" => ModuleName(n.text)
       }
 
-      if (orgOpt.contains(from._1) && nameOpt.contains(from._2))
+      if orgOpt.contains(from._1) && nameOpt.contains(from._2) then
         n.copy(
           child = n.child.map {
             case n if n.label == "groupId" =>
@@ -373,7 +368,6 @@ object Pom {
     fromVersion: String,
     toVersion: String
   ): Elem = {
-
     def adjustVersion(n: Elem): Elem = {
 
       val orgOpt = n.child.collectFirst {
@@ -383,7 +377,7 @@ object Pom {
         case n if n.label == "artifactId" => ModuleName(n.text)
       }
 
-      if (orgOpt.contains(org) && nameOpt.contains(name))
+      if orgOpt.contains(org) && nameOpt.contains(name) then
         n.copy(
           child = n.child.map {
             case n if n.label == "version" && n.text.trim == fromVersion =>
@@ -416,5 +410,4 @@ object Pom {
     val printer = new scala.xml.PrettyPrinter(Int.MaxValue, 2)
     """<?xml version="1.0" encoding="UTF-8"?>""" + '\n' + printer.format(elem)
   }
-
 }

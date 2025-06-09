@@ -30,10 +30,7 @@ final case class DirContent(elements: Seq[(String, Content)]) {
         n == name || n.startsWith(prefix)
     }
 
-    if (remove.isEmpty)
-      this
-    else
-      DirContent(keep)
+    if remove.isEmpty then this else DirContent(keep)
   }
 
   def update(name: String, content: Content): DirContent =
@@ -41,7 +38,5 @@ final case class DirContent(elements: Seq[(String, Content)]) {
 }
 
 object DirContent {
-
-  val empty = DirContent(Nil)
-
+  val empty: DirContent = DirContent(Nil)
 }

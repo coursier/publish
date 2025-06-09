@@ -41,16 +41,14 @@ final case class HttpDownload(
       try {
         val resp = req.send(backend)
 
-        if (resp.isSuccess) {
+        if resp.isSuccess then {
           val lastModifiedOpt = resp.header("Last-Modified").map { value =>
             Instant.ofEpochMilli(Date.parse(value))
           }
           Some((lastModifiedOpt, resp.body))
         }
-        else if (resp.isClientError)
-          None
-        else
-          ???
+        else if resp.isClientError then None
+        else ???
       }
       catch {
         case NonFatal(e) =>

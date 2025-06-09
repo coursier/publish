@@ -10,15 +10,9 @@ sealed abstract class PublishRepository extends Product with Serializable {
   def readReleaseRepo: MavenRepository
 
   final def repo(isSnapshot: Boolean): MavenRepository =
-    if (isSnapshot)
-      snapshotRepo
-    else
-      releaseRepo
+    if isSnapshot then snapshotRepo else releaseRepo
   final def readRepo(isSnapshot: Boolean): MavenRepository =
-    if (isSnapshot)
-      readSnapshotRepo
-    else
-      readReleaseRepo
+    if isSnapshot then readSnapshotRepo else readReleaseRepo
   def checkResultsRepo(isSnapshot: Boolean): MavenRepository =
     readRepo(isSnapshot)
 
@@ -26,7 +20,6 @@ sealed abstract class PublishRepository extends Product with Serializable {
 }
 
 object PublishRepository {
-
   final case class Simple(
     snapshotRepo: MavenRepository,
     readRepoOpt: Option[MavenRepository] = None
@@ -48,7 +41,6 @@ object PublishRepository {
     token: String,
     overrideAuthOpt: Option[Authentication]
   ) extends PublishRepository {
-
     def releaseRepo: MavenRepository =
       MavenRepository(
         s"https://maven.pkg.github.com/$username/$repo",
@@ -71,7 +63,6 @@ object PublishRepository {
   }
 
   final case class Sonatype(base: MavenRepository) extends PublishRepository {
-
     def snapshotRepo: MavenRepository =
       base.withRoot(s"${base.root}/content/repositories/snapshots")
     def releaseRepo: MavenRepository =
@@ -84,10 +75,8 @@ object PublishRepository {
       base.withRoot(s"${base.root}/content/repositories/releases")
 
     override def checkResultsRepo(isSnapshot: Boolean): MavenRepository =
-      if (isSnapshot)
-        super.checkResultsRepo(isSnapshot)
-      else
-        base.withRoot(s"${base.root}/content/repositories/public")
+      if isSnapshot then super.checkResultsRepo(isSnapshot)
+      else base.withRoot(s"${base.root}/content/repositories/public")
 
     def restBase: String =
       s"${base.root}/service/local"
@@ -100,5 +89,4 @@ object PublishRepository {
 
   def gitHub(username: String, repo: String, token: String): PublishRepository =
     GitHub(username, repo, token, None)
-
 }

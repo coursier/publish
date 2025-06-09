@@ -14,7 +14,6 @@ sealed abstract class Content extends Product with Serializable {
 }
 
 object Content {
-
   final case class File(path: Path) extends Content {
     def lastModified: Instant =
       Files.getLastModifiedTime(path).toInstant
@@ -28,5 +27,4 @@ object Content {
     def content(): Array[Byte] =
       content0
   }
-
 }

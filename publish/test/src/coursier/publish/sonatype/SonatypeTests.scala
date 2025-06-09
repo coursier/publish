@@ -6,7 +6,7 @@ import sttp.client3.testing.SttpBackendStub
 import utest.*
 
 object SonatypeTests extends TestSuite {
-  val tests = Tests {
+  val tests: Tests = Tests {
     test("Retry sonatype repository actions") {
       var count       = 0
       val mockBackend = SttpBackendStub.synchronous

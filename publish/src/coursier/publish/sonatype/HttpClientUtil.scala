@@ -31,10 +31,7 @@ private[sonatype] final case class HttpClientUtil(
       }
 
     val contentTypeHeaders =
-      if (isJson)
-        Seq(new Header("Content-Type", "application/json"))
-      else
-        Nil
+      if isJson then Seq(new Header("Content-Type", "application/json")) else Nil
 
     val req = basicRequest
       .header(
@@ -56,7 +53,7 @@ private[sonatype] final case class HttpClientUtil(
 
   def create(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false): Unit = {
     val resp = createResponse(url, post, isJson)
-    if (resp.code.code != 201)
+    if resp.code.code != 201 then
       throw new Exception(
         s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
       )
@@ -67,12 +64,9 @@ private[sonatype] final case class HttpClientUtil(
     post: Option[Array[Byte]] = None,
     isJson: Boolean = false
   ): Response[Array[Byte]] = {
-    if (verbosity >= 1)
-      Console.err.println(s"Getting $url")
+    if verbosity >= 1 then Console.err.println(s"Getting $url")
     val resp = request(url, post, isJson).send(backend)
-    if (verbosity >= 1)
-      Console.err.println(s"Got HTTP ${resp.code.code} from $url")
-
+    if verbosity >= 1 then Console.err.println(s"Got HTTP ${resp.code.code} from $url")
     resp
   }
 
@@ -82,15 +76,12 @@ private[sonatype] final case class HttpClientUtil(
     nested: Boolean = true,
     isJson: Boolean = false
   ): T = {
-
-    if (verbosity >= 1)
-      Console.err.println(s"Getting $url")
+    if verbosity >= 1 then Console.err.println(s"Getting $url")
     val resp = request(url, post, isJson).send(backend)
-    if (verbosity >= 1)
-      Console.err.println(s"Done: $url")
+    if verbosity >= 1 then Console.err.println(s"Done: $url")
 
-    if (resp.code.isSuccess)
-      if (nested)
+    if resp.code.isSuccess then
+      if nested then
         try readFromArray[T](resp.body)
         catch {
           case e: JsonReaderException =>
@@ -105,10 +96,8 @@ private[sonatype] final case class HttpClientUtil(
     else {
       val msg =
         s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
-      if (resp.code.isClientError)
-        throw new FileNotFoundException(msg)
-      else
-        throw new Exception(msg)
+      if resp.code.isClientError then throw new FileNotFoundException(msg)
+      else throw new Exception(msg)
     }
   }
 }

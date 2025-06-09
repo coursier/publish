@@ -82,8 +82,7 @@ object Group {
         files.elements.map {
           case (n, c) =>
             val newName =
-              if (n == "maven-metadata.xml" || n.startsWith("maven-metadata.xml."))
-                n
+              if n == "maven-metadata.xml" || n.startsWith("maven-metadata.xml.") then n
               else {
                 assert(n.startsWith(prefix), s"nope for $n.startsWith($prefix)")
                 n.stripPrefix(prefix)
@@ -95,18 +94,15 @@ object Group {
       copy(files = updatedContent)
     }
 
-    private def updateFileNames: Module = {
-
+    private def updateFileNames(): Module = {
       val newPrefix = s"${name.value}-${snapshotVersioning.getOrElse(version)}"
 
       val updatedContent = DirContent(
         files.elements.collect {
           case (n, c) =>
             val newName =
-              if (n == "maven-metadata.xml" || n.startsWith("maven-metadata.xml."))
-                n
-              else
-                s"$newPrefix$n"
+              if n == "maven-metadata.xml" || n.startsWith("maven-metadata.xml.") then n
+              else s"$newPrefix$n"
             (newName, c)
         }
       )
@@ -119,7 +115,6 @@ object Group {
       name: Option[ModuleName],
       version: Option[String]
     ): Module = {
-
       val base =
         version match {
           case Some(v) if !v.endsWith("SNAPSHOT") =>
@@ -135,7 +130,7 @@ object Group {
           name = name.getOrElse(base.name),
           version = version.getOrElse(base.version)
         )
-        .updateFileNames
+        .updateFileNames()
     }
 
     /** Adjust the organization / name / version.
@@ -153,29 +148,26 @@ object Group {
       distMgmtRepo: Option[(String, String, String)],
       now: Instant
     ): Module =
-      if (
-        org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty && developers
+      if org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty && developers
           .isEmpty && homePage.isEmpty && gitDomainPath.isEmpty
-      )
-        this
+      then this
       else
         updateOrgNameVer(org, name, version)
           .updatePom(now, licenses, developers, homePage, gitDomainPath, distMgmtRepo)
           .updateMavenMetadata(now)
 
-    def removeMavenMetadata: Module =
+    def removeMavenMetadata(): Module =
       copy(
         files = files.remove("maven-metadata.xml")
       )
 
     def clearSnapshotVersioning: Module =
-      if (snapshotVersioning.isEmpty)
-        this
+      if snapshotVersioning.isEmpty then this
       else
         stripPrefixes
-          .removeMavenMetadata
+          .removeMavenMetadata()
           .copy(snapshotVersioning = None)
-          .updateFileNames
+          .updateFileNames()
 
     def transform(
       map: Map[(Organization, ModuleName), (Organization, ModuleName)],
@@ -297,8 +289,7 @@ object Group {
         .elements
         .exists(_._1 == "maven-metadata.xml")
 
-      if (mavenMetadataFound)
-        this
+      if mavenMetadataFound then this
       else {
         val updatedContent = {
           val b = {
@@ -319,7 +310,7 @@ object Group {
       }
     }
 
-    def mavenMetadataContentOpt = files
+    def mavenMetadataContentOpt: Option[Content] = files
       .elements
       .find(_._1 == "maven-metadata.xml")
       .map(_._2)
@@ -371,8 +362,7 @@ object Group {
         val updatedVersion0 = updatedVersion(buildNumber)
         files.elements.collect {
           case (n, _) if n.startsWith(initialFilePrefix + ".") =>
-            if (ignoreExtensions.exists(e => n.endsWith("." + e)))
-              Nil
+            if ignoreExtensions.exists(e => n.endsWith("." + e)) then Nil
             else
               Seq((
                 None,
@@ -383,10 +373,8 @@ object Group {
           case (n, _) if n.startsWith(initialFilePrefix + "-") =>
             val suffix = n.stripPrefix(initialFilePrefix + "-")
             val idx    = suffix.indexOf('.')
-            if (idx < 0)
-              ???
-            else if (ignoreExtensions.exists(e => n.endsWith("." + e)))
-              Nil
+            if idx < 0 then ???
+            else if ignoreExtensions.exists(e => n.endsWith("." + e)) then Nil
             else {
               val classifier = suffix.take(idx)
               val ext        = suffix.drop(idx + 1)
@@ -407,7 +395,7 @@ object Group {
         }.flatten
       }
 
-      def files0(buildNumber: Int) = {
+      def files0(buildNumber: Int): DirContent = {
         val updatedVersion0   = updatedVersion(buildNumber)
         val updatedFilePrefix = s"${name.value}-$updatedVersion0"
         DirContent(
@@ -441,7 +429,7 @@ object Group {
             }
           val latestSnapshotVer =
             s"$versionPrefix-${latestSnapshotParams._2.atOffset(ZoneOffset.UTC).toLocalDateTime.format(publish.MavenMetadata.timestampPattern)}-${latestSnapshotParams._1}"
-          if (snapshotVersioning.contains(latestSnapshotVer))
+          if snapshotVersioning.contains(latestSnapshotVer) then
             latestSnapshotParams._1 -> elem // kind of meh, this is in case the source already has snapshot ver, and the dest hasn't, so the current maven metadata only comes from the source
           else {
             val buildNumber = latestSnapshotParams._1 + 1
@@ -466,11 +454,9 @@ object Group {
     }
 
     def ordered: Module = {
-
       // POM file last
       // checksum before underlying file
       // signatures before underlying file
-
       val pomFileName0      = pomFileName
       val (pomFiles, other) = files.elements.partition {
         case (n, _) =>
@@ -484,15 +470,14 @@ object Group {
 
   /** Subset of a [[FileSet]] corresponding to maven-metadata.xml files.
     *
-    * This correspond to the maven-metadata.xml file under org/name/maven-metadata.xml, not the ones
-    * that can be found under org/name/version/maven-metadata.xml (these are in [[Module]]).
+    * This corresponds to the maven-metadata.xml file under org/name/maven-metadata.xml, not the
+    * ones that can be found under org/name/version/maven-metadata.xml (these are in [[Module]]).
     */
   final case class MavenMetadata(
     organization: Organization,
     name: ModuleName,
     files: DirContent
   ) extends Group {
-
     def module: coursier.core.Module =
       coursier.core.Module(organization, name, Map.empty)
 
@@ -601,15 +586,14 @@ object Group {
             val org                   = Organization(reverseOrg.reverse.mkString("."))
             val name                  = ModuleName(strName)
             val snapshotVersioningOpt =
-              if (ver.endsWith("SNAPSHOT"))
+              if ver.endsWith("SNAPSHOT") then
                 Some(elements.map(_._1.elements.last).filter(_.endsWith(".pom")))
                   .filter(_.nonEmpty)
                   .map(_.minBy(_.length))
                   .filter(_.startsWith(s"${name.value}-"))
                   .map(_.stripPrefix(s"${name.value}-").stripSuffix(".pom"))
                   .filter(_ != ver)
-              else
-                None
+              else None
             val fileNamePrefixes = {
               val p = s"${name.value}-${snapshotVersioningOpt.getOrElse(ver)}"
               Set(".", "-").map(p + _)
@@ -620,10 +604,9 @@ object Group {
               p.elements.lastOption.contains("maven-metadata.xml") ||
               p.elements.lastOption.exists(_.startsWith("maven-metadata.xml."))
 
-            if (elements.forall(t => recognized(t._1))) {
+            if elements.forall(t => recognized(t._1)) then {
               val strippedDir = elements.map {
-                case (p, c) =>
-                  p.elements.last -> c
+                case (p, c) => p.elements.last -> c
               }
               Module(org, name, ver, snapshotVersioningOpt, DirContent(strippedDir))
             }
@@ -640,7 +623,7 @@ object Group {
               p.elements.lastOption.contains("maven-metadata.xml") ||
               p.elements.lastOption.exists(_.startsWith("maven-metadata.xml."))
 
-            if (elements.forall(t => recognized(t._1))) {
+            if elements.forall(t => recognized(t._1)) then {
               val strippedDir = elements.map {
                 case (p, c) =>
                   p.elements.last -> c
@@ -678,10 +661,9 @@ object Group {
       .iterator
       .toMap
 
-    if (duplicatedModules.isEmpty && duplicatedMeta.isEmpty)
+    if duplicatedModules.isEmpty && duplicatedMeta.isEmpty then
       Right(groups.foldLeft(FileSet.empty)(_ ++ _.fileSet))
-    else
-      ???
+    else ???
   }
 
   private[coursier] def mergeUnsafe(groups: Seq[Group]): FileSet =

@@ -20,7 +20,6 @@ final case class RawJson(value: Array[Byte]) {
 }
 
 object RawJson {
-
   import com.github.plokhotnyuk.jsoniter_scala.core.*
 
   implicit val codec: JsonValueCodec[RawJson] = new JsonValueCodec[RawJson] {

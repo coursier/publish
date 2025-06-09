@@ -35,5 +35,4 @@ object Download {
           exception
         ) // can some exceptions be transient?
   }
-
 }

@@ -7,15 +7,13 @@ import java.io.{OutputStream, OutputStreamWriter}
 final class InteractiveSonatypeLogger(out: OutputStreamWriter, verbosity: Int)
     extends SonatypeLogger {
   override def listingProfiles(attempt: Int, total: Int): Unit =
-    if (verbosity >= 0) {
-      val extra =
-        if (attempt == 0) ""
-        else s" (attempt $attempt / $total)"
+    if verbosity >= 0 then {
+      val extra = if attempt == 0 then "" else s" (attempt $attempt / $total)"
       out.write("Listing Sonatype profiles..." + extra)
       out.flush()
     }
   override def listedProfiles(errorOpt: Option[Throwable]): Unit = {
-    if (verbosity >= 0) {
+    if verbosity >= 0 then {
       out.clearLine(2)
       out.write('\n')
       out.up(1)
@@ -23,13 +21,9 @@ final class InteractiveSonatypeLogger(out: OutputStreamWriter, verbosity: Int)
     }
 
     val msgOpt =
-      if (errorOpt.isEmpty)
-        if (verbosity >= 1)
-          Some("Listed Sonatype profiles")
-        else
-          None
-      else
-        Some("Fail to list Sonatype profiles")
+      if errorOpt.isEmpty then
+        if verbosity >= 1 then Some("Listed Sonatype profiles") else None
+      else Some("Fail to list Sonatype profiles")
 
     for (msg <- msgOpt) {
       out.write(s"$msg" + System.lineSeparator())

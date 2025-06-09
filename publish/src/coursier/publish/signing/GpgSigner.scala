@@ -48,9 +48,7 @@ final case class GpgSigner(
     temporary: Boolean,
     content: Content
   ): Either[String, String] = {
-
     // inspired by https://github.com/jodersky/sbt-gpg/blob/853e608120eac830068bbb121b486b7cf06fc4b9/src/main/scala/Gpg.scala
-
     val dest = Files.createTempFile(
       "signer",
       ".asc",
@@ -83,27 +81,22 @@ final case class GpgSigner(
 
       val retCode = p.waitFor()
 
-      if (retCode == 0)
-        Right(new String(Files.readAllBytes(dest), StandardCharsets.UTF_8))
-      else
-        Left(s"gpg failed (return code: $retCode)")
+      if retCode == 0 then Right(new String(Files.readAllBytes(dest), StandardCharsets.UTF_8))
+      else Left(s"gpg failed (return code: $retCode)")
     }
     finally {
       // Ignore I/O errors?
       Files.deleteIfExists(dest)
-      if (temporary)
-        Files.deleteIfExists(path)
+      if temporary then Files.deleteIfExists(path)
     }
   }
 }
 
 object GpgSigner {
-
   sealed abstract class Key extends Product with Serializable
 
   object Key {
     final case class Id(id: String) extends Key
     case object Default             extends Key
   }
-
 }

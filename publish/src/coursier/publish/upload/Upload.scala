@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutorService
 /** Uploads / sends content to a repository.
   */
 trait Upload {
-
   // TODO Support chunked content?
 
   /** Uploads content at the passed `url`.
@@ -56,7 +55,6 @@ trait Upload {
     logger: UploadLogger,
     parallel: Option[ExecutorService]
   ): Task[Seq[(Path, Content, Upload.Error)]] = {
-
     val baseUrl0 = repository.root
 
     // TODO Add exponential back off for transient errors
@@ -81,7 +79,7 @@ trait Upload {
             }
         }
 
-      if (parallel.isEmpty)
+      if parallel.isEmpty then
         tasks
           .foldLeft(Task.point(Option.empty[(Path, Content, Upload.Error)])) {
             case (acc, task) =>
