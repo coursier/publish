@@ -12,7 +12,7 @@ object Versions {
   def scala212      = "2.12.20"
   def scalaMeta     = "4.13.6"
   def coursier      = "2.1.24"
-  def jsoniterScala = "2.36.2"
+  def jsoniterScala = "2.36.3"
 }
 
 object publish extends Cross[Publish](Versions.scala213, Versions.scala212)
