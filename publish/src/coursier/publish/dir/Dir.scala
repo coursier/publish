@@ -30,7 +30,8 @@ object Dir {
             .to(LazyList)
             .flatMap(files)
         }
-        finally if (s != null)
+        finally
+          if (s != null)
             s.close()
       }
       else
@@ -68,7 +69,8 @@ object Dir {
           s = Files.list(f)
           s.iterator().asScala.toVector.partition(Files.isDirectory(_))
         }
-        finally if (s != null)
+        finally
+          if (s != null)
             s.close()
       }
 

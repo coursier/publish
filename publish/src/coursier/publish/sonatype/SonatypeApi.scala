@@ -215,7 +215,7 @@ final case class SonatypeApi(
                       Nil
                   }
                   if (errors.isEmpty)
-                    task(attempt + 1, backoffFactor * nextDelay, totalDelay + nextDelay)
+                    task(attempt + 1, nextDelay * backoffFactor, totalDelay + nextDelay)
                       .schedule(nextDelay, es)
                   else
                     Task.fail(

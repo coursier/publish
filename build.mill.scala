@@ -8,20 +8,17 @@ import scala.concurrent.duration.{Duration, DurationInt}
 import com.goyeau.mill.scalafix.ScalafixModule
 
 object Versions {
-  def scala213      = "2.13.16"
-  def scala212      = "2.12.20"
-  def scalaMeta     = "4.13.6"
+  def scala3        = "3.3.6"
   def coursier      = "2.1.24"
   def jsoniterScala = "2.36.3"
 }
 
-object publish extends Cross[Publish](Versions.scala213, Versions.scala212)
+object publish extends Publish
 
 object Deps {
-  def collectionCompat = ivy"org.scala-lang.modules::scala-collection-compat::2.13.0"
-  def coursierCache    = ivy"io.get-coursier::coursier-cache:${Versions.coursier}"
-  def coursierCore     = ivy"io.get-coursier::coursier-core:${Versions.coursier}"
-  def jsoniterCore     =
+  def coursierCache = ivy"io.get-coursier:coursier-cache_2.13:${Versions.coursier}"
+  def coursierCore  = ivy"io.get-coursier:coursier-core_2.13:${Versions.coursier}"
+  def jsoniterCore  =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniterScala}"
   def jsoniterMacros =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
@@ -29,41 +26,26 @@ object Deps {
   def utest = ivy"com.lihaoyi::utest::0.8.5"
 }
 
-trait Publish extends CrossScalaModule with Published with ScalafixModule {
-  def scalacPluginIvyDeps: Target[Agg[Dep]] = super.scalacPluginIvyDeps() ++ {
-    if (scalaVersion().startsWith("2."))
-      Seq(ivy"org.scalameta:::semanticdb-scalac:${Versions.scalaMeta}")
-    else Nil
-  }
+trait Publish extends ScalaModule with Published with ScalafixModule {
+  def scalaVersion: Target[String] = Versions.scala3
   // based on https://github.com/VirtusLab/scala-cli/blob/7dac44f9e04d028bfc150e8bc10614df8dba6581/project/settings/package.mill.scala#L789-L816
   override def scalacOptions: Target[Seq[String]] = Task {
-    val isScala2      = crossScalaVersion.startsWith("2.")
     val parentOptions = {
-      val l = super.scalacOptions()
-      if (isScala2) l.filterNot(_.startsWith("-P:semanticdb:sourceroot:"))
-      else {
-        val len = l.length
-        val idx = l.indexWhere(_.startsWith("-sourceroot"))
-        if (idx >= 0 && idx < len - 1) l.take(idx) ++ l.drop(idx + 2)
-        else l
-      }
+      val l   = super.scalacOptions()
+      val len = l.length
+      val idx = l.indexWhere(_.startsWith("-sourceroot"))
+      if (idx >= 0 && idx < len - 1) l.take(idx) ++ l.drop(idx + 2)
+      else l
     }
-    val lintingOptions = crossScalaVersion match {
-      case s if s.startsWith("2.12") => Seq("-Ywarn-unused")
-      case s if s.startsWith("2.13") => Seq("-Wunused")
-      case _                         => Seq("-Wunused:all")
-    }
-    val sourceRoot   = os.Path(sys.env("MILL_WORKSPACE_ROOT"))
-    val semDbOptions =
-      if (isScala2) Seq(s"-P:semanticdb:sourceroot:$sourceRoot")
-      else Seq(s"-sourceroot", sourceRoot.toString)
+    val lintingOptions = Seq("-Wunused:all")
+    val sourceRoot     = os.Path(sys.env("MILL_WORKSPACE_ROOT"))
+    val semDbOptions   = Seq(s"-sourceroot", sourceRoot.toString)
     parentOptions ++ lintingOptions ++ semDbOptions
   }
 
   def ivyDeps: Target[Agg[Dep]] = super.ivyDeps() ++ Seq(
     Deps.coursierCache,
     Deps.coursierCore,
-    Deps.collectionCompat,
     Deps.jsoniterCore,
     Deps.sttp
   )
