@@ -133,9 +133,9 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
 
     val split = Group.split(this)
 
-    def order(m: Map[Group.Module, Seq[coursier.core.Module]]): Stream[Group.Module] =
+    def order(m: Map[Group.Module, Seq[coursier.core.Module]]): LazyList[Group.Module] =
       if (m.isEmpty)
-        Stream.empty
+        LazyList.empty
       else {
 
         val (now, later) = m.partition(_._2.isEmpty)
@@ -148,11 +148,11 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
           .keys
           .toVector
           .sortBy(_.module.toString) // sort to make output deterministic
-          .toStream
+          .to(LazyList)
 
         val done = now.keySet.map(_.module)
 
-        val later0 = later.mapValues(_.filterNot(done)).iterator.toMap
+        val later0 = later.view.mapValues(_.filterNot(done)).iterator.toMap
 
         prefix #::: order(later0)
       }
@@ -167,7 +167,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
       .map { l =>
         val m                 = l.toMap
         val current           = m.keySet.map(_.module)
-        val interDependencies = m.mapValues(_.filter(current)).iterator.toMap
+        val interDependencies = m.view.mapValues(_.filter(current)).iterator.toMap
         order(interDependencies).toVector
       }
 

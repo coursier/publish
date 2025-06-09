@@ -704,6 +704,7 @@ object Group {
     val meta = groups
       .collect { case m: Group.MavenMetadata => m }
       .groupBy(m => (m.organization, m.name))
+      .view
       .mapValues {
         case Seq(md) => md
         case _       => ???

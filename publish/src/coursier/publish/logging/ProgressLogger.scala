@@ -69,10 +69,8 @@ final class ProgressLogger[T](
           val doneCount = m.count(_._2.isRight)
           val done      = s.done.get()
           val em        =
-            if (done)
-              doneEmoji.fold("")(_ + " ")
-            else
-              tickers(doneCount % tickers.length) + " "
+            if done then doneEmoji.fold("")(_ + " ")
+            else s"${tickers(doneCount % tickers.length)} "
           val totalPart = s.totalOpt.filter(_ => !done).fold("")(t => s" / $t")
           out.write(
             s" $em$processedMessage $doneCount$totalPart " + elementName + extra +

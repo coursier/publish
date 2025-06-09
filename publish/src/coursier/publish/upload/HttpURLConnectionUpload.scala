@@ -89,7 +89,7 @@ final case class HttpURLConnectionUpload(
           Some(
             new Upload.Error.HttpError(
               code,
-              conn.getHeaderFields.asScala.mapValues(_.asScala.toList).iterator.toMap,
+              conn.getHeaderFields.asScala.view.mapValues(_.asScala.toList).iterator.toMap,
               content
             )
           )
