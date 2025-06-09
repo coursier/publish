@@ -2,11 +2,9 @@ package coursier.publish.download
 
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
-import sttp.client3._
+import sttp.client3.*
 import sttp.model.{Header, Uri}
 
-import java.net.URLConnection
-import java.text.DateFormat
 import java.time.Instant
 import java.util.Date
 
@@ -34,7 +32,7 @@ final case class HttpDownload(
       }
 
     val req = basicRequest
-      .headers(authHeaders: _*)
+      .headers(authHeaders*)
       .response(asByteArrayAlways)
       .get(uri)
     logger.downloadingIfExists(url)
@@ -43,16 +41,14 @@ final case class HttpDownload(
       try {
         val resp = req.send(backend)
 
-        if (resp.isSuccess) {
+        if resp.isSuccess then {
           val lastModifiedOpt = resp.header("Last-Modified").map { value =>
             Instant.ofEpochMilli(Date.parse(value))
           }
           Some((lastModifiedOpt, resp.body))
         }
-        else if (resp.isClientError)
-          None
-        else
-          ???
+        else if resp.isClientError then None
+        else ???
       }
       catch {
         case NonFatal(e) =>

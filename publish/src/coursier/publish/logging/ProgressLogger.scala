@@ -4,11 +4,10 @@ import coursier.cache.internal.Terminal.Ansi
 import coursier.cache.internal.ThreadUtil
 
 import java.io.Writer
-import java.lang.{Boolean => JBoolean}
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.{ConcurrentHashMap, Executors, ScheduledFuture, TimeUnit}
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /** Displays the progress of some task on a single line.
   *
@@ -23,13 +22,12 @@ final class ProgressLogger[T](
   doneEmoji: Option[String] = Some(Console.GREEN + "✔" + Console.RESET)
 ) {
 
-  import ProgressLogger._
+  import ProgressLogger.*
 
   private val states  = new ConcurrentHashMap[T, State]
   private var printed = 0
 
   private def clear(): Unit = {
-
     for (_ <- 1 to printed) {
       out.clearLine(2)
       out.down(1)
@@ -45,54 +43,46 @@ final class ProgressLogger[T](
   private[this] val tickers = "⠁⠁⠉⠙⠚⠒⠂⠂⠒⠲⠴⠤⠄⠄⠤⠠⠠⠤⠦⠖⠒⠐⠐⠒⠓⠋⠉⠈⠈ "
 
   private def update(scrollUp: Boolean = true): Runnable =
-    new Runnable {
-      def run() = {
+    () => {
+      clear()
 
-        clear()
-
-        for ((_, s) <- states.asScala.toVector.sortBy(_._2.totalOpt.sum)) {
-          val m       = s.processed.asScala.iterator.toMap
-          val ongoing = m.count(_._2.isLeft)
-          val extra   =
-            if (ongoing > 0) {
-              val total = m.iterator.flatMap(_._2.left.toOption.iterator.map(_._2)).sum
-              if (total > 0L) {
-                val done =
-                  m.iterator.flatMap(_._2.left.toOption.iterator.filter(_._2 > 0L).map(_._1)).sum
-                val pct = f"${100L * done.toDouble / total}%.2f %%"
-                s" ($pct of $ongoing on-going)"
-              }
-              else
-                s" ($ongoing on-going)"
+      for ((_, s) <- states.asScala.toVector.sortBy(_._2.totalOpt.sum)) {
+        val m       = s.processed.asScala.iterator.toMap
+        val ongoing = m.count(_._2.isLeft)
+        val extra   =
+          if ongoing > 0 then {
+            val total = m.iterator.flatMap(_._2.left.toOption.iterator.map(_._2)).sum
+            if total > 0L then {
+              val done =
+                m.iterator.flatMap(_._2.left.toOption.iterator.filter(_._2 > 0L).map(_._1)).sum
+              val pct = f"${100L * done.toDouble / total}%.2f %%"
+              s" ($pct of $ongoing on-going)"
             }
-            else
-              ""
-          val doneCount = m.count(_._2.isRight)
-          val done      = s.done.get()
-          val em        =
-            if (done)
-              doneEmoji.fold("")(_ + " ")
-            else
-              tickers(doneCount % tickers.length) + " "
-          val totalPart = s.totalOpt.filter(_ => !done).fold("")(t => s" / $t")
-          out.write(
-            s" $em$processedMessage $doneCount$totalPart " + elementName + extra +
-              System.lineSeparator()
-          )
-          printed += 1
-        }
-
-        if (scrollUp)
-          out.up(printed)
-
-        out.flush()
+            else s" ($ongoing on-going)"
+          }
+          else ""
+        val doneCount = m.count(_._2.isRight)
+        val done      = s.done.get()
+        val em        =
+          if done then doneEmoji.fold("")(_ + " ")
+          else s"${tickers(doneCount % tickers.length)} "
+        val totalPart = s.totalOpt.filter(_ => !done).fold("")(t => s" / $t")
+        out.write(
+          s" $em$processedMessage $doneCount$totalPart " + elementName + extra +
+            System.lineSeparator()
+        )
+        printed += 1
       }
+
+      if scrollUp then out.up(printed)
+
+      out.flush()
     }
 
   private val onChangeUpdate     = update()
   private val onChangeUpdateLock = new Object
   private def onChange(): Unit   = {
-    if (updateOnChange)
+    if updateOnChange then
       onChangeUpdateLock.synchronized {
         onChangeUpdate.run()
       }
@@ -136,14 +126,14 @@ final class ProgressLogger[T](
 
   // FIXME Unused if updateOnChange is true
   private val pool = Executors.newScheduledThreadPool(1, ThreadUtil.daemonThreadFactory())
-  private var updateFutureOpt = Option.empty[ScheduledFuture[_]]
+  private var updateFutureOpt = Option.empty[ScheduledFuture[?]]
 
   private val period = 1000L / 50L
 
   def start(): Unit = {
     assert(!pool.isShutdown)
     assert(updateFutureOpt.isEmpty)
-    if (!updateOnChange) {
+    if !updateOnChange then {
       val f = pool.scheduleAtFixedRate(update(), 0L, period, TimeUnit.MILLISECONDS)
       updateFutureOpt = Some(f)
     }
@@ -152,18 +142,14 @@ final class ProgressLogger[T](
     updateFutureOpt.foreach(_.cancel(false))
     pool.shutdown()
     pool.awaitTermination(2L * period, TimeUnit.MILLISECONDS)
-    if (keep)
-      update(scrollUp = false).run()
-    else
-      clear()
+    if keep then update(scrollUp = false).run()
+    else clear()
   }
 }
 
 object ProgressLogger {
-
   private final class State(val totalOpt: Option[Int]) {
     val done      = new AtomicBoolean(false)
     val processed = new ConcurrentHashMap[String, Either[(Long, Long), Unit]]
   }
-
 }

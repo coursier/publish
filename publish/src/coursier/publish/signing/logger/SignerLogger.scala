@@ -13,8 +13,5 @@ trait SignerLogger {
 }
 
 object SignerLogger {
-
-  val nop: SignerLogger =
-    new SignerLogger {}
-
+  val nop: SignerLogger = new SignerLogger {}
 }

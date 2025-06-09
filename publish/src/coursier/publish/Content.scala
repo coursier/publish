@@ -6,7 +6,7 @@ import java.time.Instant
 /** Content of a file, either on disk or in memory.
   */
 sealed abstract class Content extends Product with Serializable {
-  def lastModified(): Instant
+  def lastModified: Instant
   // TODO Support chunked reading
   def content(): Array[Byte]
 
@@ -14,9 +14,8 @@ sealed abstract class Content extends Product with Serializable {
 }
 
 object Content {
-
   final case class File(path: Path) extends Content {
-    def lastModified(): Instant =
+    def lastModified: Instant =
       Files.getLastModifiedTime(path).toInstant
     def content(): Array[Byte] =
       Files.readAllBytes(path)
@@ -28,5 +27,4 @@ object Content {
     def content(): Array[Byte] =
       content0
   }
-
 }

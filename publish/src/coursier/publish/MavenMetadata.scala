@@ -10,7 +10,6 @@ import scala.util.Try
 import scala.xml.{Elem, Node}
 
 object MavenMetadata {
-
   final case class Info(
     latest: Option[String],
     release: Option[String],
@@ -18,8 +17,8 @@ object MavenMetadata {
     lastUpdated: Option[LocalDateTime]
   )
 
-  private val lastUpdatedPattern = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-  val timestampPattern           = DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss")
+  private val lastUpdatedPattern          = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+  val timestampPattern: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss")
 
   def create(
     org: Organization,
@@ -147,7 +146,7 @@ object MavenMetadata {
       </versioning>
     </metadata>
 
-  def snapshotVersioningBuildNumber(elem: Elem) =
+  def snapshotVersioningBuildNumber(elem: Elem): Option[Int] =
     elem.child.collectFirst {
       case n: Elem if n.label == "versioning" =>
         n.child.collectFirst {
@@ -159,7 +158,7 @@ object MavenMetadata {
         }.flatten
     }.flatten
 
-  def currentSnapshotVersioning(elem: Elem) =
+  def currentSnapshotVersioning(elem: Elem): Option[(Int, LocalDateTime)] =
     elem.child.collectFirst {
       case n: Elem if n.label == "versioning" =>
         n.child.collectFirst {
@@ -224,10 +223,8 @@ object MavenMetadata {
                     val extension = n.child.collectFirst {
                       case n0 if n0.label == "extension" => n0.text
                     }.getOrElse("")
-                    if (m.contains((classifierOpt, extension)))
-                      Nil
-                    else
-                      Seq(n)
+                    if m.contains((classifierOpt, extension)) then Nil
+                    else Seq(n)
                   case n => Seq(n)
                 }
 
@@ -257,7 +254,6 @@ object MavenMetadata {
     )
 
   def info(elem: Elem): Info = {
-
     val latestOpt = elem
       .child
       .collectFirst {
@@ -315,7 +311,5 @@ object MavenMetadata {
     )
   }
 
-  def print(elem: Elem): String =
-    Pom.print(elem)
-
+  def print(elem: Elem): String = Pom.print(elem)
 }

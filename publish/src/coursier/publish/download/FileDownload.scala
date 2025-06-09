@@ -2,7 +2,6 @@ package coursier.publish.download
 
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
-import coursier.util.Task
 
 import java.nio.file.{Files, Path}
 import java.time.Instant
@@ -21,19 +20,15 @@ final case class FileDownload(base: Path) extends Download {
   ): Option[(Option[Instant], Array[Byte])] = {
 
     val p = base0.resolve(url).normalize()
-    if (p.startsWith(base0)) {
+    if p.startsWith(base0) then {
       logger.downloadingIfExists(url)
       val res =
-        try if (Files.isRegularFile(p)) {
+        try if Files.isRegularFile(p) then {
             val lastModified = Files.getLastModifiedTime(p).toInstant
             Right(Some((Some(lastModified), Files.readAllBytes(p))))
           }
-          else
-            Right(None)
-        catch {
-          case NonFatal(e) =>
-            Left(e)
-        }
+          else Right(None)
+        catch { case NonFatal(e) => Left(e) }
       logger.downloadedIfExists(
         url,
         res.toOption.flatMap(_.map(_._2.length)),

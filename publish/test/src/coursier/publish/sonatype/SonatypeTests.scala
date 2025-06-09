@@ -3,14 +3,16 @@ package coursier.publish.sonatype
 import coursier.publish.util.EmaRetryParams
 import sttp.client3.testing.SttpBackendStub
 
-import utest._
+import utest.*
 
 object SonatypeTests extends TestSuite {
-  val tests = Tests {
+  val tests: Tests = Tests {
     test("Retry sonatype repository actions") {
       var count       = 0
       val mockBackend = SttpBackendStub.synchronous
-        .whenRequestMatches { _ => count += 1; count < 6 }
+        .whenRequestMatches { _ =>
+          count += 1; count < 6
+        }
         .thenRespondServerError()
         .whenRequestMatches(_ => count >= 6)
         .thenRespondOk()

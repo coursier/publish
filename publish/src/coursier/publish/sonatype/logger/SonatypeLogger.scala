@@ -6,6 +6,5 @@ trait SonatypeLogger {
 }
 
 object SonatypeLogger {
-  val nop: SonatypeLogger =
-    new SonatypeLogger {}
+  val nop: SonatypeLogger = new SonatypeLogger {}
 }

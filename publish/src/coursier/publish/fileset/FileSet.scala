@@ -8,8 +8,6 @@ import coursier.util.Task
 import java.time.Instant
 import java.util.concurrent.ExecutorService
 
-import scala.collection.compat._
-
 final case class FileSet(elements: Seq[(Path, Content)]) {
   def ++(other: FileSet): FileSet = {
     // complexity possibly not too optimal… (removeAll iterates on all elements)
@@ -32,10 +30,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
         p == path || p.repr.startsWith(prefix)
     }
 
-    if (remove.isEmpty)
-      this
-    else
-      FileSet(keep)
+    if remove.isEmpty then this else FileSet(keep)
   }
 
   def update(path: Path, content: Content): FileSet =
@@ -53,12 +48,10 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
     now: Instant,
     pool: ExecutorService
   ): Task[FileSet] = {
-
     val split = Group.split(this)
 
     val adjustOrgName =
-      if (org.isEmpty && name.isEmpty)
-        Task.point(split)
+      if org.isEmpty && name.isEmpty then Task.point(split)
       else {
         val map = split.map {
           case m: Group.Module =>
@@ -132,29 +125,25 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
   }
 
   def order(pool: ExecutorService): Task[FileSet] = {
-
     val split = Group.split(this)
 
-    def order(m: Map[Group.Module, Seq[coursier.core.Module]]): Stream[Group.Module] =
-      if (m.isEmpty)
-        Stream.empty
+    def order(m: Map[Group.Module, Seq[coursier.core.Module]]): LazyList[Group.Module] =
+      if m.isEmpty then LazyList.empty
       else {
-
         val (now, later) = m.partition(_._2.isEmpty)
 
-        if (now.isEmpty)
-          // FIXME Report that properly
-          throw new Exception(s"Found cycle in input modules\n$m")
+        // FIXME Report that properly
+        if now.isEmpty then throw new Exception(s"Found cycle in input modules\n$m")
 
         val prefix = now
           .keys
           .toVector
           .sortBy(_.module.toString) // sort to make output deterministic
-          .toStream
+          .to(LazyList)
 
         val done = now.keySet.map(_.module)
 
-        val later0 = later.mapValues(_.filterNot(done)).iterator.toMap
+        val later0 = later.view.mapValues(_.filterNot(done)).iterator.toMap
 
         prefix #::: order(later0)
       }
@@ -169,7 +158,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
       .map { l =>
         val m                 = l.toMap
         val current           = m.keySet.map(_.module)
-        val interDependencies = m.mapValues(_.filter(current)).iterator.toMap
+        val interDependencies = m.view.mapValues(_.filter(current)).iterator.toMap
         order(interDependencies).toVector
       }
 
@@ -187,7 +176,7 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
       val unknownMavenMetadata = mavenMetadataMap
         .view
         .filterKeys(!modules(_))
-        .map(_._2)
+        .values
         .toVector
         .sortBy(_.module.toString) // sort to make output deterministic
 
@@ -203,7 +192,5 @@ final case class FileSet(elements: Seq[(Path, Content)]) {
 }
 
 object FileSet {
-
-  val empty = FileSet(Nil)
-
+  val empty: FileSet = FileSet(Nil)
 }

@@ -2,7 +2,6 @@ package coursier.publish.download
 
 import coursier.core.Authentication
 import coursier.publish.download.logger.DownloadLogger
-import coursier.util.Task
 
 import java.time.Instant
 
@@ -36,5 +35,4 @@ object Download {
           exception
         ) // can some exceptions be transient?
   }
-
 }

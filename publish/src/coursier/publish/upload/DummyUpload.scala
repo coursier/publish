@@ -2,7 +2,6 @@ package coursier.publish.upload
 
 import coursier.core.Authentication
 import coursier.publish.upload.logger.UploadLogger
-import coursier.util.Task
 
 final case class DummyUpload(underlying: Upload) extends Upload {
   def upload(
@@ -11,6 +10,5 @@ final case class DummyUpload(underlying: Upload) extends Upload {
     content: Array[Byte],
     logger: UploadLogger,
     loggingId: Option[Object]
-  ): Option[Upload.Error] =
-    None
+  ): Option[Upload.Error] = None
 }

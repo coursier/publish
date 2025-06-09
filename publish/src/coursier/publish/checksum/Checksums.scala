@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutorService
 import scala.util.control.NonFatal
 
 object Checksums {
-
   def clear(types: Seq[ChecksumType], fs: FileSet): FileSet = {
     val extensions = types.map("." + _.extension)
     FileSet(
@@ -135,5 +134,4 @@ object Checksums {
       res <- Task.fromEither(a)
     } yield res
   }
-
 }

@@ -12,7 +12,6 @@ import java.util.concurrent.ScheduledExecutorService
 import scala.concurrent.duration.DurationInt
 
 trait Hooks {
-
   type T >: Null
 
   def beforeUpload(fileSet: FileSet, isSnapshot: Boolean): Task[T] =
@@ -25,7 +24,6 @@ trait Hooks {
 }
 
 object Hooks {
-
   final case class Sonatype(
     repo: PublishRepository.Sonatype,
     api: SonatypeApi,
@@ -34,26 +32,22 @@ object Hooks {
     batch: Boolean,
     es: ScheduledExecutorService
   ) extends Hooks {
-
     private def logger =
-      if (batch)
-        new BatchSonatypeLogger(out, verbosity)
-      else
-        InteractiveSonatypeLogger.create(out, verbosity)
+      if batch then new BatchSonatypeLogger(out, verbosity)
+      else InteractiveSonatypeLogger.create(out, verbosity)
 
     type T = Option[(SonatypeApi.Profile, String)]
 
     override def beforeUpload(fileSet0: FileSet, isSnapshot: Boolean): Task[T] =
-      if (isSnapshot)
-        Task.point(None)
+      if isSnapshot then Task.point(None)
       else
         for (p <- PublishTasks.sonatypeProfile(fileSet0, api, logger))
           yield {
-            if (verbosity >= 2)
+            if verbosity >= 2 then
               out.println(s"Selected Sonatype profile ${p.name} (id: ${p.id}, uri: ${p.uri})")
-            else if (verbosity >= 1)
+            else if verbosity >= 1 then
               out.println(s"Selected Sonatype profile ${p.name} (id: ${p.id})")
-            else if (verbosity >= 0)
+            else if verbosity >= 0 then
               out.println(s"Selected Sonatype profile ${p.name}")
 
             val id = api.createStagingRepository(p, "create staging repository")
@@ -107,7 +101,5 @@ object Hooks {
     verbosity: Int,
     batch: Boolean,
     es: ScheduledExecutorService
-  ): Hooks =
-    new Sonatype(repo, api, out, verbosity, batch, es)
-
+  ): Hooks = Sonatype(repo, api, out, verbosity, batch, es)
 }

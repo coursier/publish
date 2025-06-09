@@ -1,12 +1,12 @@
 package coursier.publish.sonatype
 
-import com.github.plokhotnyuk.jsoniter_scala.core._
-import com.github.plokhotnyuk.jsoniter_scala.macros._
+import com.github.plokhotnyuk.jsoniter_scala.core.*
+import com.github.plokhotnyuk.jsoniter_scala.macros.*
 import coursier.core.Authentication
 import coursier.publish.sonatype.logger.SonatypeLogger
 import coursier.publish.util.EmaRetryParams
 import coursier.util.Task
-import sttp.client3._
+import sttp.client3.*
 
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ScheduledExecutorService
@@ -28,7 +28,7 @@ final case class SonatypeApi(
   // vaguely inspired by https://github.com/lihaoyi/mill/blob/7b4ced648ecd9b79b3a16d67552f0bb69f4dd543/scalalib/src/mill/scalalib/publish/SonatypeHttpApi.scala
   // and https://github.com/xerial/sbt-sonatype/blob/583db138df2b0e7bbe58717103f2c9874fca2a74/src/main/scala/xerial/sbt/Sonatype.scala
 
-  import SonatypeApi._
+  import SonatypeApi.*
 
   private def postBody(content: Array[Byte]): Array[Byte] =
     """{"data":""".getBytes(StandardCharsets.UTF_8) ++ content ++ "}".getBytes(
@@ -41,10 +41,8 @@ final case class SonatypeApi(
     nested: Boolean = true,
     isJson: Boolean = false
   ): T =
-    if (nested)
-      clientUtil.get(url, post, nested, isJson)(Response.codec[T]).data
-    else
-      clientUtil.get[T](url, post, nested, isJson)
+    if nested then clientUtil.get(url, post, nested, isJson)(using Response.codec[T]).data
+    else clientUtil.get[T](url, post, nested, isJson)
 
   private val clientUtil = HttpClientUtil(backend, authentication, verbosity)
 
@@ -67,7 +65,7 @@ final case class SonatypeApi(
     def task(attempt: Int) = Task.delay {
       logger.listingProfiles(attempt, retryOnTimeout)
       val res =
-        try get(s"$base/staging/profiles")(Profiles.Profile.listCodec)
+        try get(s"$base/staging/profiles")(using Profiles.Profile.listCodec)
             .map(_.profile)
         catch {
           case NonFatal(e) =>
@@ -82,7 +80,7 @@ final case class SonatypeApi(
   }
 
   def rawListProfiles(): RawJson =
-    get(s"$base/staging/profiles")(RawJson.codec)
+    get(s"$base/staging/profiles")(using RawJson.codec)
 
   def decodeListProfilesResponse(json: RawJson): Either[Exception, Seq[SonatypeApi.Profile]] =
     try {
@@ -96,11 +94,11 @@ final case class SonatypeApi(
 
   def listProfileRepositories(profileIdOpt: Option[String]): Seq[SonatypeApi.Repository] =
     get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(
-      RepositoryResponse.listCodec
+      using RepositoryResponse.listCodec
     ).map(_.repository)
 
   def rawListProfileRepositories(profileIdOpt: Option[String]): RawJson =
-    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(RawJson.codec)
+    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(using RawJson.codec)
 
   def decodeListProfileRepositoriesResponse(json: RawJson)
     : Either[Exception, Seq[SonatypeApi.Repository]] =
@@ -115,14 +113,14 @@ final case class SonatypeApi(
       s"${profile.uri}/start",
       post = Some(postBody(writeToArray(StartRequest(description)))),
       isJson = true
-    )(StartResponse.codec).stagedRepositoryId
+    )(using StartResponse.codec).stagedRepositoryId
 
   def rawCreateStagingRepository(profile: Profile, description: String): RawJson =
     get(
       s"${profile.uri}/start",
       post = Some(postBody(writeToArray(StartRequest(description)))),
       isJson = true
-    )(RawJson.codec)
+    )(using RawJson.codec)
 
   private def stagedRepoAction(
     action: String,
@@ -136,8 +134,8 @@ final case class SonatypeApi(
     def sendRequest(attempt: Int, waitDurationMs: Long): Unit = {
       val resp = clientUtil.createResponse(url, post = Some(body), isJson = true)
 
-      if (!resp.code.isSuccess) {
-        if (attempt >= stagingRepoRetryParams.attempts)
+      if !resp.code.isSuccess then {
+        if attempt >= stagingRepoRetryParams.attempts then
           throw new Exception(
             s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
           )
@@ -154,26 +152,23 @@ final case class SonatypeApi(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    stagedRepoAction("finish", profile, repositoryId, description)
+  ): Unit = stagedRepoAction("finish", profile, repositoryId, description)
 
   def sendPromoteStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    stagedRepoAction("promote", profile, repositoryId, description)
+  ): Unit = stagedRepoAction("promote", profile, repositoryId, description)
 
   def sendDropStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
-  ): Unit =
-    stagedRepoAction("drop", profile, repositoryId, description)
+  ): Unit = stagedRepoAction("drop", profile, repositoryId, description)
 
   def lastActivity(repositoryId: String, action: String): Option[RawJson] =
     get(s"$base/staging/repository/$repositoryId/activity", nested = false)(
-      SonatypeApi.jsonListCodec
+      using SonatypeApi.jsonListCodec
     )
       .filter { json =>
         val nameOpt = readFromArray(json.value)(SonatypeApi.MaybeHasName.codec).name
@@ -191,9 +186,7 @@ final case class SonatypeApi(
     backoffFactor: Double,
     es: ScheduledExecutorService
   ): Task[Unit] = {
-
     // TODO Stop early in case of error (which statuses exactly???)
-
     def task(attempt: Int, nextDelay: Duration, totalDelay: Duration): Task[Unit] =
       Task.delay(listProfileRepositories(Some(profileId))).flatMap { l =>
         l.find(_.id == repositoryId) match {
@@ -206,7 +199,7 @@ final case class SonatypeApi(
               case `status` =>
                 Task.point(())
               case other =>
-                if (attempt < maxAttempt) {
+                if attempt < maxAttempt then {
                   val errors = checkActivityOpt match {
                     case Some(checkActivity) =>
                       val lastActivity0 = lastActivity(repositoryId, checkActivity)
@@ -214,8 +207,8 @@ final case class SonatypeApi(
                     case None =>
                       Nil
                   }
-                  if (errors.isEmpty)
-                    task(attempt + 1, backoffFactor * nextDelay, totalDelay + nextDelay)
+                  if errors.isEmpty then
+                    task(attempt + 1, nextDelay * backoffFactor, totalDelay + nextDelay)
                       .schedule(nextDelay, es)
                   else
                     Task.fail(
@@ -239,7 +232,6 @@ final case class SonatypeApi(
 }
 
 object SonatypeApi {
-
   final case class Profile(
     id: String,
     name: String,
@@ -259,10 +251,7 @@ object SonatypeApi {
       val errors = a.events
         .filter(_.severity >= 1)
         .map(e => e.propertiesMap.getOrElse("failureMessage", e.name))
-      if (errors.isEmpty)
-        Right(())
-      else
-        Left(errors)
+      if errors.isEmpty then Right(()) else Left(errors)
     }
     catch {
       case e: JsonReaderException =>
@@ -320,7 +309,7 @@ object SonatypeApi {
       name: String,
       resourceURI: String
     ) {
-      def profile =
+      def profile: SonatypeApi.Profile =
         SonatypeApi.Profile(
           id,
           name,

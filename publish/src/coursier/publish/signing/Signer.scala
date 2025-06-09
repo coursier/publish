@@ -3,12 +3,10 @@ package coursier.publish.signing
 import coursier.publish.Content
 import coursier.publish.fileset.{FileSet, Path}
 import coursier.publish.signing.logger.SignerLogger
-import coursier.util.Task
 
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 
-import scala.util.Try
 import scala.util.control.NonFatal
 
 /** Signs artifacts.
@@ -41,10 +39,10 @@ trait Signer {
 
     val elementsOrSignatures = fileSet.elements.flatMap {
       case (path, content) =>
-        if (path.elements.lastOption.exists(n => n.endsWith(".asc")))
+        if path.elements.lastOption.exists(n => n.endsWith(".asc")) then
           // found a signature
           Seq(Right(path.mapLast(_.stripSuffix(".asc"))))
-        else if (path.elements.lastOption.exists(n => n.contains(".asc.")))
+        else if path.elements.lastOption.exists(n => n.contains(".asc.")) then
           // FIXME May not be ok if e.g. version contains .asc., like 2.0.asc.1 (this is unlikely though)
           // ignored file
           Nil
@@ -103,8 +101,7 @@ trait Signer {
 
     val toSignFs = FileSet(toSign)
 
-    if (toSignFs.isEmpty)
-      Right(FileSet.empty)
+    if toSignFs.isEmpty then Right(FileSet.empty)
     else {
       val id      = new Object
       val logger0 = logger
@@ -118,5 +115,4 @@ trait Signer {
       }
     }
   }
-
 }

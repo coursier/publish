@@ -3,7 +3,6 @@ package coursier.publish.upload
 import coursier.core.Authentication
 import coursier.paths.Util
 import coursier.publish.upload.logger.UploadLogger
-import coursier.util.Task
 
 import java.net.URI
 import java.nio.file.{Files, Path, Paths}
@@ -22,9 +21,8 @@ final case class FileUpload(base: Path) extends Upload {
     logger: UploadLogger,
     loggingId: Option[Object]
   ): Option[Upload.Error] = {
-
     val p = base0.resolve(Paths.get(new URI(url))).normalize()
-    if (p.startsWith(base0)) {
+    if p.startsWith(base0) then {
       logger.uploading(p.toString, loggingId, Some(content.length))
       val errorOpt =
         try {

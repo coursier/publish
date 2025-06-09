@@ -2,13 +2,12 @@ package coursier.publish.dir
 
 import coursier.publish.Content
 import coursier.publish.dir.logger.DirLogger
-import coursier.publish.fileset.{FileSet, Path => FsPath}
-import coursier.util.Task
+import coursier.publish.fileset.{FileSet, Path as FsPath}
 
 import java.nio.file.{Files, Path}
 
 import scala.collection.compat.immutable.LazyList
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.control.NonFatal
 
 object Dir {
@@ -16,11 +15,11 @@ object Dir {
   def fileSet(dir: Path, logger: DirLogger): FileSet = {
 
     def files(f: Path): LazyList[Path] =
-      if (Files.isRegularFile(f)) {
+      if Files.isRegularFile(f) then {
         logger.element(dir, f)
         LazyList(f)
       }
-      else if (Files.isDirectory(f)) {
+      else if Files.isDirectory(f) then {
         var s: java.util.stream.Stream[Path] = null
         try {
           s = Files.list(f)
@@ -30,8 +29,7 @@ object Dir {
             .to(LazyList)
             .flatMap(files)
         }
-        finally if (s != null)
-            s.close()
+        finally if s != null then s.close()
       }
       else
         // ???
@@ -68,15 +66,13 @@ object Dir {
           s = Files.list(f)
           s.iterator().asScala.toVector.partition(Files.isDirectory(_))
         }
-        finally if (s != null)
-            s.close()
+        finally
+          if s != null then s.close()
       }
 
       val checkFiles =
-        if (files.isEmpty)
-          None
-        else
-          Some(files.exists(isMetadata))
+        if files.isEmpty then None
+        else Some(files.exists(isMetadata))
 
       // there should be a monoid for that…
 

@@ -8,7 +8,7 @@ import java.io.{ByteArrayOutputStream, InputStream, OutputStream}
 import java.net.{HttpURLConnection, URL}
 import java.nio.charset.StandardCharsets
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -17,7 +17,6 @@ final case class HttpURLConnectionUpload(
   readTimeoutMsOpt: Option[Int],
   connectTimeoutMsOpt: Option[Int]
 ) extends Upload {
-
   def upload(
     url: String,
     authentication: Option[Authentication],
@@ -56,20 +55,19 @@ final case class HttpURLConnectionUpload(
         os.close()
 
         val code = conn.getResponseCode
-        if (code == 401) {
+        if code == 401 then {
           val realmOpt = Option(conn.getRequestProperty("WWW-Authenticate")).collect {
             case CacheUrl.BasicRealm(r) => r
           }
           Some(new Upload.Error.Unauthorized(url, realmOpt))
         }
-        else if (code / 100 == 2)
-          None
+        else if code / 100 == 2 then None
         else {
           val content = {
             es = Option(conn.getErrorStream)
               .orElse(Try(conn.getInputStream).toOption).orNull
 
-            if (es != null) {
+            if es != null then {
               val buf  = Array.ofDim[Byte](16384)
               val baos = new ByteArrayOutputStream
               var read = -1
@@ -89,7 +87,7 @@ final case class HttpURLConnectionUpload(
           Some(
             new Upload.Error.HttpError(
               code,
-              conn.getHeaderFields.asScala.mapValues(_.asScala.toList).iterator.toMap,
+              conn.getHeaderFields.asScala.view.mapValues(_.asScala.toList).iterator.toMap,
               content
             )
           )
@@ -99,18 +97,15 @@ final case class HttpURLConnectionUpload(
         // Trying to ensure the same connection is being re-used across requests
         // see https://docs.oracle.com/javase/8/docs/technotes/guides/net/http-keepalive.html
         try {
-          if (os == null)
-            os = conn.getOutputStream
-          if (os != null)
-            os.close()
+          if os == null then os = conn.getOutputStream
+          if os != null then os.close()
         }
         catch {
           case NonFatal(_) =>
         }
         try {
-          if (is == null)
-            is = conn.getInputStream
-          if (is != null) {
+          if is == null then is = conn.getInputStream
+          if is != null then {
             val buf = Array.ofDim[Byte](16384)
             while (is.read(buf) > 0) {}
             is.close()
@@ -120,9 +115,8 @@ final case class HttpURLConnectionUpload(
           case NonFatal(_) =>
         }
         try {
-          if (es == null)
-            es = conn.getErrorStream
-          if (es != null) {
+          if es == null then es = conn.getErrorStream
+          if es != null then {
             val buf = Array.ofDim[Byte](16384)
             while (es.read(buf) > 0) {}
             es.close()
@@ -145,10 +139,8 @@ final case class HttpURLConnectionUpload(
 }
 
 object HttpURLConnectionUpload {
-  def create(): Upload =
-    HttpURLConnectionUpload("", None, None)
-  def create(urlSuffix: String): Upload =
-    HttpURLConnectionUpload(urlSuffix, None, None)
+  def create(): Upload                  = HttpURLConnectionUpload("", None, None)
+  def create(urlSuffix: String): Upload = HttpURLConnectionUpload(urlSuffix, None, None)
 
   /** Create a HttpURLConnectionUpload with a read timeout
     * @param readTimeoutMs

@@ -26,8 +26,8 @@ object ChecksumType {
   case object SHA1 extends ChecksumType("sha-1", "sha1", 40)
   case object MD5  extends ChecksumType("md5", "md5", 32)
 
-  val all = Seq(SHA1, MD5)
-  val map = all.map(c => c.name -> c).toMap
+  val all: Seq[ChecksumType]         = Seq(SHA1, MD5)
+  val map: Map[String, ChecksumType] = all.map(c => c.name -> c).toMap
 
   def parse(s: String): Either[String, ChecksumType] =
     map

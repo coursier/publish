@@ -12,7 +12,6 @@ import java.time.Instant
 import java.util.concurrent.ExecutorService
 
 object PublishTasks {
-
   def updateMavenMetadata(
     fs: FileSet,
     now: Instant,
@@ -22,7 +21,6 @@ object PublishTasks {
     withMavenSnapshotVersioning: Boolean,
     pool: ExecutorService
   ): Task[FileSet] = {
-
     val groups = Group.split(fs)
 
     for {
@@ -46,14 +44,12 @@ object PublishTasks {
       groups2 <- Task.gather.gather {
         groups1.map {
           case m: Group.Module if m.version.endsWith("SNAPSHOT") && !m.version.contains("+") =>
-            if (withMavenSnapshotVersioning) {
+            if withMavenSnapshotVersioning then {
               val m0 = Group.downloadSnapshotVersioningMetadata(m, download, repository, logger)
               m0.addSnapshotVersioning(now, Set("md5", "sha1", "asc")) // meh second arg
             }
-            else
-              m.clearSnapshotVersioning
-          case other =>
-            other
+            else m.clearSnapshotVersioning
+          case other => other
         }
           .map(Task.point)
       }
@@ -62,7 +58,6 @@ object PublishTasks {
   }
 
   def clearMavenMetadata(fs: FileSet): FileSet = {
-
     val groups = Group.split(fs)
 
     val updatedGroups = groups.flatMap {
@@ -78,7 +73,6 @@ object PublishTasks {
     api: SonatypeApi,
     logger: SonatypeLogger
   ): Task[SonatypeApi.Profile] = {
-
     val groups = Group.split(fs)
     val orgs   = groups.map(_.organization).distinct
 
@@ -87,10 +81,8 @@ object PublishTasks {
         val validProfiles =
           profiles.filter(p => org.value == p.name || org.value.startsWith(p.name + "."))
         val profileOpt =
-          if (validProfiles.isEmpty)
-            None
-          else
-            Some(validProfiles.minBy(_.name.length))
+          if validProfiles.isEmpty then None
+          else Some(validProfiles.minBy(_.name.length))
         org -> profileOpt
       }
 
@@ -98,14 +90,14 @@ object PublishTasks {
         case (org, None) => org
       }
 
-      if (noProfiles.isEmpty) {
+      if noProfiles.isEmpty then {
         val m0 = m.collect {
           case (org, Some(p)) => org -> p
         }
 
         val grouped = m0.groupBy(_._2)
 
-        if (grouped.size > 1)
+        if grouped.size > 1 then
           Task.fail(new Exception(
             s"Cannot publish to several Sonatype profiles at once (${grouped.keys.toVector.map(_.name).sorted})"
           ))
@@ -119,7 +111,5 @@ object PublishTasks {
           s"No Sonatype profile found to publish under organization(s) ${noProfiles.map(_.value).sorted.mkString(", ")}"
         ))
     }
-
   }
-
 }
