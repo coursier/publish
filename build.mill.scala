@@ -10,7 +10,7 @@ import com.goyeau.mill.scalafix.ScalafixModule
 object Versions {
   def scala3        = "3.3.6"
   def coursier      = "2.1.24"
-  def jsoniterScala = "2.36.3"
+  def jsoniterScala = "2.36.6"
 }
 
 object publish extends Publish
