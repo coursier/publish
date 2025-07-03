@@ -23,7 +23,7 @@ object Deps {
   def jsoniterMacros =
     ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
   def sttp  = ivy"com.softwaremill.sttp.client3::core:3.11.0"
-  def utest = ivy"com.lihaoyi::utest::0.8.8"
+  def utest = ivy"com.lihaoyi::utest::0.8.9"
 }
 
 trait Publish extends ScalaModule with Published with ScalafixModule {
