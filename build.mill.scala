@@ -6,6 +6,7 @@ import mill.scalalib._
 
 import scala.concurrent.duration.{Duration, DurationInt}
 import com.goyeau.mill.scalafix.ScalafixModule
+import com.lumidion.sonatype.central.client.core.{PublishingType, SonatypeCredentials}
 
 object Versions {
   def scala3        = "3.3.6"
@@ -53,14 +54,31 @@ trait Publish extends ScalaModule with Published with ScalafixModule {
   }
 }
 
+def publishOrg: String = "io.get-coursier.publish"
+def ghOrg: String      = "coursier"
+def ghName: String     = "publish"
+
 def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]): Command[Unit] =
   Task.Command {
+    val taskNames = tasks.value.map(_.toString())
+    System.err.println(
+      s"""Tasks producing artifacts to be included in the bundle:
+         |  ${taskNames.mkString("\n  ")}""".stripMargin
+    )
+    val publishVersion = finalPublishVersion()
+    System.err.println(s"Publish version: $publishVersion")
+    val bundleName = s"$publishOrg-$ghName-$publishVersion"
+    System.err.println(s"Publishing bundle: $bundleName")
     val timeout     = 10.minutes
-    val credentials = sys.env("SONATYPE_USERNAME") + ":" + sys.env("SONATYPE_PASSWORD")
+    val credentials = SonatypeCredentials(
+      username = sys.env("SONATYPE_USERNAME"),
+      password = sys.env("SONATYPE_PASSWORD")
+    )
     val pgpPassword = sys.env("PGP_PASSWORD")
     val data        = Task.sequence(tasks.value)()
 
     doPublishSonatype(
+      bundleName = bundleName,
       credentials = credentials,
       pgpPassword = pgpPassword,
       data = data,
@@ -72,7 +90,8 @@ def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]): Command[
   }
 
 private def doPublishSonatype(
-  credentials: String,
+  bundleName: String,
+  credentials: SonatypeCredentials,
   pgpPassword: String,
   data: Seq[PublishModule.PublishData],
   timeout: Duration,
@@ -80,9 +99,10 @@ private def doPublishSonatype(
   env: Map[String, String],
   log: mill.api.Logger
 ): Unit = {
-
+  System.err.println("Actual artifacts included in the bundle:")
   val artifacts = data.map {
     case PublishModule.PublishData(a, s) =>
+      System.err.println(s"  ${a.group}:${a.id}:${a.version}")
       (s.map { case (p, f) => (p.path, f) }, a)
   }
 
@@ -95,11 +115,9 @@ private def doPublishSonatype(
     )
     set.head
   }
-  val publisher = new mill.scalalib.publish.SonatypePublisher(
-    uri = "https://oss.sonatype.org/service/local",
-    snapshotUri = "https://oss.sonatype.org/content/repositories/snapshots",
+  System.err.println(s"Is release: $isRelease")
+  val publisher = new SonatypeCentralPublisher(
     credentials = credentials,
-    signed = true,
     gpgArgs = Seq(
       "--detach-sign",
       "--batch=true",
@@ -116,19 +134,26 @@ private def doPublishSonatype(
     log = log,
     workspace = workspace,
     env = env,
-    awaitTimeout = timeout.toMillis.toInt,
-    stagingRelease = isRelease
+    awaitTimeout = timeout.toMillis.toInt
   )
 
-  publisher.publishAll(isRelease, artifacts: _*)
+  val publishingType = if (isRelease) PublishingType.AUTOMATIC else PublishingType.USER_MANAGED
+  System.err.println(s"Publishing type: $publishingType")
+  val finalBundleName = if (bundleName.nonEmpty) Some(bundleName) else None
+  System.err.println(s"Final bundle name: $finalBundleName")
+  publisher.publishAll(
+    publishingType = publishingType,
+    singleBundleName = finalBundleName,
+    artifacts = artifacts: _*
+  )
 }
 
-trait Published extends PublishModule {
+trait Published extends SonatypeCentralPublishModule {
   import mill.scalalib.publish._
   def pomSettings: Target[PomSettings] = PomSettings(
     description = artifactName(),
-    organization = "io.get-coursier.publish",
-    url = s"https://github.com/coursier/publish",
+    organization = publishOrg,
+    url = s"https://github.com/$ghOrg/$ghName",
     licenses = Seq(License.`Apache-2.0`),
     versionControl = VersionControl.github("coursier", "publish"),
     developers = Seq(
