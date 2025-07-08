@@ -62,15 +62,30 @@ object PublishRepository {
         .mkString("GitHub(", ", ", ")")
   }
 
-  final case class Sonatype(base: MavenRepository) extends PublishRepository {
+  /** Represents Sonatype Central Portal implementation for publishing artifacts.
+    * @param base
+    *   the base for the Sonatype Maven repository, defaults to the Central Portal OSSRH Staging API
+    * @param centralPortalBase
+    *   The base URL for the Sonatype Central Portal
+    * @param useLegacySnapshots
+    *   enables deprecated legacy snapshot repository path, kept for historical purposes
+    */
+  final case class Sonatype(
+    base: MavenRepository = MavenRepository("https://ossrh-staging-api.central.sonatype.com"),
+    centralPortalBase: String = "https://central.sonatype.com",
+    useLegacySnapshots: Boolean = false
+  ) extends PublishRepository {
     @deprecated(
       message = "Snapshot repo as per the old OSSRH purposes, kept for historical purposes",
-      since = "0.3.1"
+      since = "0.4.0"
     )
     def legacySnapshotRepo: MavenRepository =
       base.withRoot(s"${base.root}/content/repositories/snapshots")
+
     def snapshotRepo: MavenRepository =
-      base.withRoot(s"https://central.sonatype.com/repository/maven-snapshots/")
+      if useLegacySnapshots then legacySnapshotRepo
+      else base.withRoot(s"$centralPortalBase/repository/maven-snapshots/")
+
     def releaseRepo: MavenRepository =
       base.withRoot(s"$restBase/staging/deploy/maven2")
     def releaseRepoOf(repoId: String): MavenRepository =
