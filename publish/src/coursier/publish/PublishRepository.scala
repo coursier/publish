@@ -63,8 +63,14 @@ object PublishRepository {
   }
 
   final case class Sonatype(base: MavenRepository) extends PublishRepository {
-    def snapshotRepo: MavenRepository =
+    @deprecated(
+      message = "Snapshot repo as per the old OSSRH purposes, kept for historical purposes",
+      since = "0.3.1"
+    )
+    def legacySnapshotRepo: MavenRepository =
       base.withRoot(s"${base.root}/content/repositories/snapshots")
+    def snapshotRepo: MavenRepository =
+      base.withRoot(s"https://central.sonatype.com/repository/maven-snapshots/")
     def releaseRepo: MavenRepository =
       base.withRoot(s"$restBase/staging/deploy/maven2")
     def releaseRepoOf(repoId: String): MavenRepository =
