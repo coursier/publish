@@ -65,7 +65,7 @@ final case class SonatypeApi(
     def task(attempt: Int) = Task.delay {
       logger.listingProfiles(attempt, retryOnTimeout)
       val res =
-        try get(s"$base/staging/profiles")(using Profiles.Profile.listCodec)
+        try get(url = s"$base/staging/profiles", isJson = true)(using Profiles.Profile.listCodec)
             .map(_.profile)
         catch {
           case NonFatal(e) =>
@@ -93,12 +93,18 @@ final case class SonatypeApi(
     }
 
   def listProfileRepositories(profileIdOpt: Option[String]): Seq[SonatypeApi.Repository] =
-    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(
+    get(
+      url = s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _),
+      isJson = true
+    )(
       using RepositoryResponse.listCodec
     ).map(_.repository)
 
   def rawListProfileRepositories(profileIdOpt: Option[String]): RawJson =
-    get(s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _))(using RawJson.codec)
+    get(
+      url = s"$base/staging/profile_repositories" + profileIdOpt.fold("")("/" + _),
+      isJson = true
+    )(using RawJson.codec)
 
   def decodeListProfileRepositoriesResponse(json: RawJson)
     : Either[Exception, Seq[SonatypeApi.Repository]] =
@@ -108,12 +114,16 @@ final case class SonatypeApi(
         Left(new Exception("Error decoding response", e))
     }
 
-  def createStagingRepository(profile: Profile, description: String): String =
+  def createStagingRepository(profile: Profile, description: String): String = {
+    Console.err.println(
+      s"Creating staging repository for profile ${profile.name} (id: ${profile.id}) with description: $description"
+    )
     get(
-      s"${profile.uri}/start",
+      s"$base/staging/profiles/${profile.id}/start",
       post = Some(postBody(writeToArray(StartRequest(description)))),
       isJson = true
     )(using StartResponse.codec).stagedRepositoryId
+  }
 
   def rawCreateStagingRepository(profile: Profile, description: String): RawJson =
     get(
@@ -128,7 +138,7 @@ final case class SonatypeApi(
     repositoryId: String,
     description: String
   ): Unit = {
-    val url  = s"${profile.uri}/$action"
+    val url  = s"$base/staging/profiles/${profile.id}/$action"
     val body = postBody(writeToArray(StagedRepositoryRequest(description, repositoryId)))
     @tailrec
     def sendRequest(attempt: Int, waitDurationMs: Long): Unit = {
@@ -154,11 +164,28 @@ final case class SonatypeApi(
     description: String
   ): Unit = stagedRepoAction("finish", profile, repositoryId, description)
 
+  @deprecated
   def sendPromoteStagingRepositoryRequest(
     profile: Profile,
     repositoryId: String,
     description: String
   ): Unit = stagedRepoAction("promote", profile, repositoryId, description)
+
+  def promoteStagingRepository(repositoryId: String, description: String): Int = {
+    if verbosity >= 1 then
+      Console.err.println(
+        s"Promoting staging repository for repository: $repositoryId with description: $description"
+      )
+    clientUtil.getEmptyResponse(
+      url = s"$base/staging/bulk/promote",
+      post = Some(postBody(writeToArray(PromoteRequest(
+        stagedRepositoryIds = Seq(repositoryId),
+        description = description,
+        autoDropAfterRelease = true
+      )))),
+      isJson = true
+    )
+  }
 
   def sendDropStagingRepositoryRequest(
     profile: Profile,
@@ -344,6 +371,24 @@ object SonatypeApi {
   private final case class StartRequest(description: String)
   private object StartRequest {
     implicit val codec: JsonValueCodec[StartRequest] = JsonCodecMaker.make
+  }
+
+  private final case class PromoteRequest(
+    stagedRepositoryIds: Seq[String],
+    description: String,
+    autoDropAfterRelease: Boolean
+  )
+  private object PromoteRequest {
+    implicit val codec: JsonValueCodec[PromoteRequest] = JsonCodecMaker.make
+  }
+
+  private final case class PromoteResponse(
+    stagedRepositoryIds: Seq[String],
+    description: String,
+    transitioning: Boolean
+  )
+  private object PromoteResponse {
+    val codec: JsonValueCodec[PromoteResponse] = JsonCodecMaker.make
   }
   private final case class StartResponse(stagedRepositoryId: String)
   private object StartResponse {

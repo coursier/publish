@@ -39,9 +39,10 @@ object SonatypeTests extends TestSuite {
       count = 0
 
       {
+        val base         = "https://oss.sonatype.org"
         val sonatypeApi3 = SonatypeApi(
           mockBackend,
-          base = "https://oss.sonatype.org",
+          base = base,
           authentication = None,
           verbosity = 0,
           retryOnTimeout = 1
@@ -54,8 +55,10 @@ object SonatypeTests extends TestSuite {
           )
         catch {
           case e: Exception
-              if e.getMessage == "Failed to get uri/promote (http status: 500, response: Internal server error)" =>
-          case _: Throwable => assert(false)
+              if e.getMessage == s"Failed to get $base/staging/profiles/id/promote (http status: 500, response: Internal server error)" =>
+          case t: Throwable =>
+            println(s"Unexpected error: ${t.getMessage}")
+            assert(false)
         }
 
         assert(count == 3)
