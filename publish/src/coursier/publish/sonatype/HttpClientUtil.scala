@@ -18,7 +18,6 @@ private[sonatype] final case class HttpClientUtil(
 ) {
 
   private def request(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false) = {
-
     val uri = Uri.parse(url) match {
       case Left(_)     => ???
       case Right(uri0) => uri0
@@ -33,22 +32,28 @@ private[sonatype] final case class HttpClientUtil(
     val contentTypeHeaders =
       if isJson then Seq(new Header("Content-Type", "application/json")) else Nil
 
-    val req = basicRequest
+    val allHeaders = authHeaders ++ contentTypeHeaders
+    val req        = basicRequest
       .header(
         "Accept",
         "application/json,application/vnd.siesta-error-v1+json,application/vnd.siesta-validation-errors-v1+json"
       )
-      .headers(authHeaders ++ contentTypeHeaders*)
+      .headers(allHeaders*)
       .response(asByteArrayAlways)
 
-    post match {
-      case Some(_) =>
-        req
-          .body(post.getOrElse(Array.emptyByteArray))
-          .post(uri)
-      case None =>
-        req.get(uri)
-    }
+    val result =
+      post match {
+        case Some(_) =>
+          if verbosity >= 2 then Console.err.println(s"POST request to $uri")
+          req
+            .body(post.getOrElse(Array.emptyByteArray))
+            .post(uri)
+        case None =>
+          if verbosity >= 2 then Console.err.println(s"GET request to $uri")
+          req.get(uri)
+      }
+    if verbosity >= 2 then Console.err.println(s"Request created successfully: $uri")
+    result
   }
 
   def create(url: String, post: Option[Array[Byte]] = None, isJson: Boolean = false): Unit = {
@@ -70,14 +75,50 @@ private[sonatype] final case class HttpClientUtil(
     resp
   }
 
+  def getEmptyResponse(
+    url: String,
+    post: Option[Array[Byte]] = None,
+    isJson: Boolean = false
+  ): Int = {
+    if verbosity >= 1 && post.isEmpty then Console.err.println(s"Getting $url")
+    else if verbosity >= 1 then Console.err.println(s"Posting to $url")
+    val req  = request(url, post, isJson)
+    val resp =
+      try req.send(backend)
+      catch {
+        case e: Throwable =>
+          if verbosity >= 1 then Console.err.println(s"Failed to get $url: ${e.getMessage}")
+          if verbosity >= 2 then e.printStackTrace()
+          throw e
+      }
+    if verbosity >= 1 then Console.err.println(s"Done: $url")
+
+    if resp.code.isSuccess then resp.code.code
+    else {
+      val msg =
+        s"Failed to get $url (http status: ${resp.code.code}, response: ${Try(new String(resp.body, StandardCharsets.UTF_8)).getOrElse("")})"
+      if resp.code.isClientError then throw new FileNotFoundException(msg)
+      else throw new Exception(msg)
+    }
+  }
+
   def get[T: JsonValueCodec](
     url: String,
     post: Option[Array[Byte]] = None,
     nested: Boolean = true,
     isJson: Boolean = false
   ): T = {
-    if verbosity >= 1 then Console.err.println(s"Getting $url")
-    val resp = request(url, post, isJson).send(backend)
+    if verbosity >= 1 && post.isEmpty then Console.err.println(s"Getting $url")
+    else if verbosity >= 1 then Console.err.println(s"Posting to $url")
+    val req  = request(url, post, isJson)
+    val resp =
+      try req.send(backend)
+      catch {
+        case e: Throwable =>
+          if verbosity >= 1 then Console.err.println(s"Failed to get $url: ${e.getMessage}")
+          if verbosity >= 2 then e.printStackTrace()
+          throw e
+      }
     if verbosity >= 1 then Console.err.println(s"Done: $url")
 
     if resp.code.isSuccess then
