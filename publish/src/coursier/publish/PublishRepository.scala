@@ -84,7 +84,7 @@ object PublishRepository {
 
     def snapshotRepo: MavenRepository =
       if useLegacySnapshots then legacySnapshotRepo
-      else base.withRoot(s"$centralPortalBase/repository/maven-snapshots/")
+      else base.withRoot(s"$centralPortalBase/repository/maven-snapshots")
 
     def releaseRepo: MavenRepository =
       base.withRoot(s"$restBase/staging/deploy/maven2")
