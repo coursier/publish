@@ -1,8 +1,11 @@
-import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.1`
-import $ivy.`com.goyeau::mill-scalafix::0.5.1`
-import de.tobiasroeser.mill.vcs.version._
-import mill._
-import mill.scalalib._
+//| mvnDeps:
+//| - com.goyeau::mill-scalafix::0.6.0
+//| - com.lumidion::sonatype-central-client-requests:0.6.0
+package build
+import mill.*
+import mill.scalalib.*
+import mill.api.{BuildCtx, Task}
+import mill.util.{Tasks, VcsVersion}
 
 import scala.concurrent.duration.{Duration, DurationInt}
 import com.goyeau.mill.scalafix.ScalafixModule
@@ -17,37 +20,37 @@ object Versions {
 object publish extends Publish
 
 object Deps {
-  def coursierCache = ivy"io.get-coursier:coursier-cache_2.13:${Versions.coursier}"
-  def coursierCore  = ivy"io.get-coursier:coursier-core_2.13:${Versions.coursier}"
+  def coursierCache = mvn"io.get-coursier:coursier-cache_2.13:${Versions.coursier}"
+  def coursierCore  = mvn"io.get-coursier:coursier-core_2.13:${Versions.coursier}"
   def jsoniterCore  =
-    ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniterScala}"
+    mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniterScala}"
   def jsoniterMacros =
-    ivy"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
-  def sttp  = ivy"com.softwaremill.sttp.client3::core:3.11.0"
-  def utest = ivy"com.lihaoyi::utest::0.8.9"
+    mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
+  def sttp  = mvn"com.softwaremill.sttp.client3::core:3.11.0"
+  def utest = mvn"com.lihaoyi::utest::0.8.9"
 }
 
 trait Publish extends ScalaModule with Published with ScalafixModule {
-  def scalaVersion: Target[String]                = Versions.scala3
-  override def scalacOptions: Target[Seq[String]] = Task {
+  def scalaVersion: T[String]                = Versions.scala3
+  override def scalacOptions: T[Seq[String]] = Task {
     super.scalacOptions() ++ Seq("-Wunused:all")
   }
 
-  def ivyDeps: Target[Agg[Dep]] = super.ivyDeps() ++ Seq(
+  def mvnDeps: T[Seq[Dep]] = super.mvnDeps() ++ Seq(
     Deps.coursierCache,
     Deps.coursierCore,
     Deps.jsoniterCore,
     Deps.sttp
   )
-  def compileIvyDeps: Target[Agg[Dep]] = super.compileIvyDeps() ++ Seq(
+  def compileMvnDeps: T[Seq[Dep]] = super.compileMvnDeps() ++ Seq(
     Deps.jsoniterMacros
   )
-  def javacOptions: Target[Seq[String]] = super.javacOptions() ++ Seq(
+  def javacOptions: T[Seq[String]] = super.javacOptions() ++ Seq(
     "--release",
     "8"
   )
   object test extends ScalaTests {
-    def ivyDeps: Target[Agg[Dep]] = super.ivyDeps() ++ Seq(
+    def mvnDeps: T[Seq[Dep]] = super.mvnDeps() ++ Seq(
       Deps.utest
     )
     def testFramework = "utest.runner.Framework"
@@ -58,7 +61,7 @@ def publishOrg: String = "io.get-coursier.publish"
 def ghOrg: String      = "coursier"
 def ghName: String     = "publish"
 
-def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]): Command[Unit] =
+def publishSonatype(tasks: Tasks[PublishModule.PublishData]): Command[Unit] =
   Task.Command {
     val taskNames = tasks.value.map(_.toString())
     System.err.println(
@@ -83,7 +86,7 @@ def publishSonatype(tasks: mill.main.Tasks[PublishModule.PublishData]): Command[
       pgpPassword = pgpPassword,
       data = data,
       timeout = timeout,
-      workspace = Task.workspace,
+      workspace = BuildCtx.workspaceRoot,
       env = Task.env,
       log = Task.ctx().log
     )
@@ -137,20 +140,20 @@ private def doPublishSonatype(
     awaitTimeout = timeout.toMillis.toInt
   )
 
-  val publishingType = if (isRelease) PublishingType.AUTOMATIC else PublishingType.USER_MANAGED
+  val publishingType = if isRelease then PublishingType.AUTOMATIC else PublishingType.USER_MANAGED
   System.err.println(s"Publishing type: $publishingType")
-  val finalBundleName = if (bundleName.nonEmpty) Some(bundleName) else None
+  val finalBundleName = if bundleName.nonEmpty then Some(bundleName) else None
   System.err.println(s"Final bundle name: $finalBundleName")
   publisher.publishAll(
     publishingType = publishingType,
     singleBundleName = finalBundleName,
-    artifacts = artifacts: _*
+    artifacts = artifacts*
   )
 }
 
 trait Published extends SonatypeCentralPublishModule {
-  import mill.scalalib.publish._
-  def pomSettings: Target[PomSettings] = PomSettings(
+  import mill.scalalib.publish.*
+  def pomSettings: T[PomSettings] = PomSettings(
     description = artifactName(),
     organization = publishOrg,
     url = s"https://github.com/$ghOrg/$ghName",
@@ -160,28 +163,26 @@ trait Published extends SonatypeCentralPublishModule {
       Developer("alexarchambault", "Alex Archambault", "https://github.com/alexarchambault")
     )
   )
-  def publishVersion: Target[String] = finalPublishVersion()
+  def publishVersion: T[String] = finalPublishVersion()
 }
 
-private def computePublishVersion(state: VcsState, simple: Boolean): String =
-  if (state.commitsSinceLastTag > 0)
-    if (simple) {
+private def computePublishVersion(state: VcsVersion.State, simple: Boolean): String =
+  if state.commitsSinceLastTag > 0 then
+    if simple then {
       val versionOrEmpty = state.lastTag
         .filter(_ != "latest")
         .filter(_ != "nightly")
         .map(_.stripPrefix("v"))
         .flatMap { tag =>
-          if (simple) {
+          if simple then {
             val idx = tag.lastIndexOf(".")
-            if (idx >= 0)
+            if idx >= 0 then
               Some(tag.take(idx + 1) + (tag.drop(idx + 1).toInt + 1).toString + "-SNAPSHOT")
-            else
-              None
+            else None
           }
           else {
             val idx = tag.indexOf("-")
-            if (idx >= 0) Some(tag.take(idx) + "+" + tag.drop(idx + 1) + "-SNAPSHOT")
-            else None
+            if idx >= 0 then Some(tag.take(idx) + "+" + tag.drop(idx + 1) + "-SNAPSHOT") else None
           }
         }
         .getOrElse("0.0.1-SNAPSHOT")
@@ -195,7 +196,7 @@ private def computePublishVersion(state: VcsState, simple: Boolean): String =
         .replace("latest", "0.0.0")
         .replace("nightly", "0.0.0")
       val idx = rawVersion.indexOf("-")
-      if (idx >= 0) rawVersion.take(idx) + "+" + rawVersion.drop(idx + 1) + "-SNAPSHOT"
+      if idx >= 0 then rawVersion.take(idx) + "+" + rawVersion.drop(idx + 1) + "-SNAPSHOT"
       else rawVersion
     }
   else {
@@ -203,13 +204,13 @@ private def computePublishVersion(state: VcsState, simple: Boolean): String =
       .lastTag
       .getOrElse(state.format())
       .stripPrefix("v")
-    if (fromTag == "0.0.0") "0.0.1-SNAPSHOT"
+    if fromTag == "0.0.0" then "0.0.1-SNAPSHOT"
     else fromTag
   }
 
-def finalPublishVersion: Target[String] = {
+def finalPublishVersion: T[String] = {
   val isCI = System.getenv("CI") != null
-  if (isCI)
+  if isCI then
     Task(persistent = true) {
       val state = VcsVersion.vcsState()
       computePublishVersion(state, simple = false)
