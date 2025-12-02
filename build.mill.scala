@@ -27,7 +27,7 @@ object Deps {
   def jsoniterMacros =
     mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
   def sttp  = mvn"com.softwaremill.sttp.client3::core:3.11.0"
-  def utest = mvn"com.lihaoyi::utest::0.8.9"
+  def utest = mvn"com.lihaoyi::utest::0.9.4"
 }
 
 trait Publish extends ScalaModule with Published with ScalafixModule {
