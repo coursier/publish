@@ -8,7 +8,6 @@ import sttp.model.{Header, Uri}
 import java.io.FileNotFoundException
 import java.nio.charset.StandardCharsets
 
-import scala.jdk.CollectionConverters.*
 import scala.util.Try
 
 private[sonatype] final case class HttpClientUtil(

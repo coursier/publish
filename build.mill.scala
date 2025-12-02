@@ -12,7 +12,7 @@ import com.goyeau.mill.scalafix.ScalafixModule
 import com.lumidion.sonatype.central.client.core.{PublishingType, SonatypeCredentials}
 
 object Versions {
-  def scala3        = "3.3.6"
+  def scala3        = "3.3.7"
   def coursier      = "2.1.24"
   def jsoniterScala = "2.36.7"
 }
