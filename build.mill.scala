@@ -15,6 +15,8 @@ object Versions {
   def scala3        = "3.3.7"
   def coursier      = "2.1.25-M19"
   def jsoniterScala = "2.38.5"
+  def sttp          = "3.11.0"
+  def utest         = "0.9.4"
 }
 
 object publish extends Publish
@@ -26,8 +28,8 @@ object Deps {
     mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniterScala}"
   def jsoniterMacros =
     mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
-  def sttp  = mvn"com.softwaremill.sttp.client3::core:3.11.0"
-  def utest = mvn"com.lihaoyi::utest::0.9.4"
+  def sttp  = mvn"com.softwaremill.sttp.client3::core:${Versions.sttp}"
+  def utest = mvn"com.lihaoyi::utest::${Versions.utest}"
 }
 
 trait Publish extends ScalaModule with Published with ScalafixModule {
