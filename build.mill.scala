@@ -35,7 +35,7 @@ object Deps {
 trait Publish extends ScalaModule with Published with ScalafixModule {
   def scalaVersion: T[String]                = Versions.scala3
   override def scalacOptions: T[Seq[String]] = Task {
-    super.scalacOptions() ++ Seq("-Wunused:all")
+    super.scalacOptions() ++ Seq("-Wunused:all", "-deprecation")
   }
 
   def mvnDeps: T[Seq[Dep]] = super.mvnDeps() ++ Seq(
