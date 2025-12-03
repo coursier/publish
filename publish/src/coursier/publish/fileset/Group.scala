@@ -1,6 +1,6 @@
 package coursier.publish.fileset
 
-import coursier.core.{ModuleName, Organization, Version}
+import coursier.core.{ModuleName, Organization}
 import coursier.maven.MavenRepository
 import coursier.publish
 import coursier.publish.Pom.{Developer, License}
@@ -9,6 +9,7 @@ import coursier.publish.download.Download
 import coursier.publish.download.logger.DownloadLogger
 import coursier.publish.{Content, Pom}
 import coursier.util.Task
+import coursier.version.Version
 
 import java.nio.charset.StandardCharsets
 import java.time.{Instant, ZoneOffset}
@@ -224,7 +225,7 @@ object Group {
             case Left(e) =>
               throw new Exception(s"Error parsing POM: $e")
             case Right(proj) =>
-              proj.dependencies.map(_._2.module)
+              proj.dependencies0.map(_._2.module)
           }
       }
 

@@ -12,9 +12,11 @@ import com.goyeau.mill.scalafix.ScalafixModule
 import com.lumidion.sonatype.central.client.core.{PublishingType, SonatypeCredentials}
 
 object Versions {
-  def scala3        = "3.3.6"
-  def coursier      = "2.1.24"
-  def jsoniterScala = "2.36.7"
+  def scala3        = "3.3.7"
+  def coursier      = "2.1.25-M19"
+  def jsoniterScala = "2.38.5"
+  def sttp          = "3.11.0"
+  def utest         = "0.9.4"
 }
 
 object publish extends Publish
@@ -26,14 +28,14 @@ object Deps {
     mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-core:${Versions.jsoniterScala}"
   def jsoniterMacros =
     mvn"com.github.plokhotnyuk.jsoniter-scala::jsoniter-scala-macros:${Versions.jsoniterScala}"
-  def sttp  = mvn"com.softwaremill.sttp.client3::core:3.11.0"
-  def utest = mvn"com.lihaoyi::utest::0.8.9"
+  def sttp  = mvn"com.softwaremill.sttp.client3::core:${Versions.sttp}"
+  def utest = mvn"com.lihaoyi::utest::${Versions.utest}"
 }
 
 trait Publish extends ScalaModule with Published with ScalafixModule {
   def scalaVersion: T[String]                = Versions.scala3
   override def scalacOptions: T[Seq[String]] = Task {
-    super.scalacOptions() ++ Seq("-Wunused:all")
+    super.scalacOptions() ++ Seq("-Wunused:all", "-deprecation")
   }
 
   def mvnDeps: T[Seq[Dep]] = super.mvnDeps() ++ Seq(
