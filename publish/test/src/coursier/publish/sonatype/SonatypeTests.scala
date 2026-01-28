@@ -55,7 +55,8 @@ object SonatypeTests extends TestSuite {
           )
         catch {
           case e: Exception
-              if e.getMessage == s"Failed to get $base/staging/profiles/id/promote (http status: 500, response: Internal server error)" =>
+              if e.getMessage ==
+                s"Failed to get $base/staging/profiles/id/promote (http status: 500, response: Internal server error)" =>
           case t: Throwable =>
             println(s"Unexpected error: ${t.getMessage}")
             assert(false)

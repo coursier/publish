@@ -149,7 +149,8 @@ object Group {
       distMgmtRepo: Option[(String, String, String)],
       now: Instant
     ): Module =
-      if org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty && developers
+      if org.isEmpty && name.isEmpty && version.isEmpty && licenses.isEmpty &&
+        developers
           .isEmpty && homePage.isEmpty && gitDomainPath.isEmpty
       then this
       else
@@ -431,7 +432,8 @@ object Group {
           val latestSnapshotVer =
             s"$versionPrefix-${latestSnapshotParams._2.atOffset(ZoneOffset.UTC).toLocalDateTime.format(publish.MavenMetadata.timestampPattern)}-${latestSnapshotParams._1}"
           if snapshotVersioning.contains(latestSnapshotVer) then
-            latestSnapshotParams._1 -> elem // kind of meh, this is in case the source already has snapshot ver, and the dest hasn't, so the current maven metadata only comes from the source
+            latestSnapshotParams._1 ->
+              elem // kind of meh, this is in case the source already has snapshot ver, and the dest hasn't, so the current maven metadata only comes from the source
           else {
             val buildNumber = latestSnapshotParams._1 + 1
             buildNumber -> publish.MavenMetadata.updateSnapshotVersioning(
