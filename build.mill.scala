@@ -16,7 +16,7 @@ object Versions {
   def coursier      = "2.1.25-M21"
   def jsoniterScala = "2.38.8"
   def sttp          = "3.11.0"
-  def utest         = "0.9.4"
+  def utest         = "0.9.5"
 }
 
 object publish extends Publish
