@@ -14,7 +14,7 @@ import com.lumidion.sonatype.central.client.core.{PublishingType, SonatypeCreden
 object Versions {
   def scala3        = "3.3.8"
   def coursier      = "2.1.25-M25"
-  def jsoniterScala = "2.38.14"
+  def jsoniterScala = "2.38.16"
   def sttp          = "3.11.0"
   def utest         = "0.9.5"
 }
