@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This project is now maintained from [scala/scala-publish](https://github.com/scala/scala-publish).
+
 # coursier-publish
 
 *Library to publish artifacts to Maven repositories*
